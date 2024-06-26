@@ -1,3 +1,9 @@
+# stop any debug/development files to be uploaded
+junk/*
+.vscode/*
+todo.txt
+junk*.*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -20,11 +26,13 @@ parts/
 sdist/
 var/
 wheels/
+pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 MANIFEST
+*.zip
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
