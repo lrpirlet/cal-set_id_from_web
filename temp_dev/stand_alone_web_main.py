@@ -47,7 +47,8 @@ from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
 #                 QVBoxLayout, QWidget
 # )
 
-from calibre.gui2 import Application
+# from calibre.gui2 import Application # lrp
+from PyQt6.QtWidgets import QApplication
 
 from json import dumps
 from functools import partial
@@ -109,11 +110,11 @@ class Search_Panel(QWidget):
 
         QShortcut(QKeySequence.StandardKey.FindNext, self, activated=next_btn.animateClick)
         QShortcut(QKeySequence.StandardKey.FindPrevious, self, activated=prev_btn.animateClick)
-        QShortcut(QKeySequence(Qt.Key_Escape), self.srch_dsp, activated=self.closed)
+        QShortcut(QKeySequence(Qt.Key.Key_Escape), self.srch_dsp, activated=self.closed)
 
     @pyqtSlot()
     def on_preview_find(self):
-        self.update_searching(QWebEnginePage.FindBackward)
+        self.update_searching(QWebEnginePage.FindFlag.FindBackward)
 
     @pyqtSlot()
     def update_searching(self, direction=QWebEnginePage.FindFlag(0)):
@@ -161,7 +162,7 @@ class MainWindow(QMainWindow):
         self.set_nav_and_status_bar()
 
       # make all that visible... I want this window on top ready to work with
-        self.setWindowFlags(Qt.WindowStaysOnTopHint)
+        self.setWindowFlags(Qt.WindowType.WindowStaysOnTopHint)
         self.show()
         self.activateWindow()
 
@@ -232,7 +233,7 @@ class MainWindow(QMainWindow):
         self.search_pnl = Search_Panel()
         self.search_toolbar = QToolBar()
         self.search_toolbar.addWidget(self.search_pnl)
-        self.addToolBar(Qt.BottomToolBarArea, self.search_toolbar)
+        self.addToolBar(Qt.ToolBarArea.BottomToolBarArea, self.search_toolbar)
         self.search_toolbar.hide()
         self.search_pnl.searched.connect(self.on_searched)
         self.search_pnl.closed.connect(self.search_toolbar.hide)
@@ -424,21 +425,22 @@ class MainWindow(QMainWindow):
         else:
             print('No book selected, no change will take place: unset')
             self.report_returned_id("unset")
-        Application.instance().quit()     # exit application... qApp gone in PyQt6
+        # Application.instance().quit()     # lrp
+        QApplication.instance().quit()
 
     def abort_book(self):                         # we want to NOT change the book and proceed to the next one
         print("in abort_book")
-        reply = QMessageBox.question(self, 'Certain', "Oublier ce livre et passer au suivant", QMessageBox.No | QMessageBox.Yes, QMessageBox.Yes)
-        if reply == QMessageBox.Yes:
+        reply = QMessageBox.question(self, 'Certain', "Oublier ce livre et passer au suivant", QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.Yes)
+        if reply == QMessageBox.StandardButton.Yes:
             print("WebEngineView was aborted: aborted")
             self.report_returned_id("aborted")
-            Application.instance().quit()     # exit application... qApp gone in PyQt6
-
+            # Application.instance().quit()     # lrp
+            QApplication.instance().quit()
 
     def closeEvent(self, event):                  # abort hit window exit "X" button we stop processing this and all following books
         print("in closeEvent event : {}".format(event))
-        reply = QMessageBox.question(self, 'Vraiment', "Quitter et ne plus rien changer", QMessageBox.No | QMessageBox.Yes, QMessageBox.Yes)
-        if reply == QMessageBox.Yes:
+        reply = QMessageBox.question(self, 'Vraiment', "Quitter et ne plus rien changer", QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.Yes)
+        if reply == QMessageBox.StandardButton.Yes:
             event.accept()
             print("WebEngineView was closed: killed")
             self.report_returned_id("killed")
@@ -456,7 +458,8 @@ def main(data):
     #        data = [url, isbn, auteurs, titre]
     url, isbn, auteurs, titre = data[0], data[1], data[2], data[3],
     # Start QWebEngineView and associated widgets
-    app = Application([])
+    # app = Application([])  # lrp
+    app = QApplication([data])
     window = MainWindow(data)
     window.initial_url(url)     # supposed to be noosfere advanced search page, fixed by launcher program
     app.exec()

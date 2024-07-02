@@ -1,12 +1,14 @@
 from multiprocessing import Process, Queue
 import time
 
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtGui import *
-from PyQt5.QtWebEngineWidgets import *
+from PyQt6.QtCore import *
+from PyQt6.QtWidgets import (QToolBar, QMainWindow, QApplication, QLineEdit, 
+                             QStatusBar, QMessageBox)
 
-##import sys
+from PyQt6.QtGui import QClipboard, QAction, QIcon
+from PyQt6.QtWebEngineWidgets import QWebEngineView
+
+import sys
 
 class MainWindow(QMainWindow):
     def __init__(self, url, isbn, auteurs, titre, que):
@@ -31,7 +33,7 @@ class MainWindow(QMainWindow):
     # set get info toolbar
         info_tb = QToolBar("Get")
         info_tb.setIconSize(QSize(60,30))
-        self.addToolBar(Qt.BottomToolBarArea, info_tb)
+        self.addToolBar(Qt.ToolBarArea.BottomToolBarArea, info_tb)
 
         ISBN_btn = QAction(QIcon('./blue_icon/ISBN.png'), "ISBN", self)
         ISBN_btn.setStatusTip("Montre et copie le ISBN dans le presse-papier pour coller dans Mots-clefs à rechercher")
@@ -118,14 +120,14 @@ class MainWindow(QMainWindow):
     def set_isbn_info(self):
         self.infobox.setText( self.isbn )
         cb = QApplication.clipboard()
-        cb.clear(mode=cb.Clipboard)
-        cb.setText(self.isbn.replace("-",""), mode=cb.Clipboard)
+        cb.clear(mode=cb.Mode.Clipboard)
+        cb.setText(self.isbn.replace("-",""), mode=cb.Mode.Clipboard)
 
     def set_auteurs_info(self):
         self.infobox.setText( self.auteurs )
         cb = QApplication.clipboard()
-        cb.clear(mode=cb.Clipboard)
-        cb.setText(self.auteurs, mode=cb.Clipboard)
+        cb.clear(mode=cb.Mode.Clipboard)
+        cb.setText(self.auteurs, mode=cb.Mode.Clipboard)
 
     def set_titre_info(self):
         self.infobox.setText( self.titre )
@@ -157,12 +159,12 @@ class MainWindow(QMainWindow):
     def select_and_exit(self):                    #sent q to the queue wait till consumed then exit
         self.que.put(self.urlbox.text())
         #sys.exit(0)
-        qApp.quit()
+        QApplication.instance().exit()
 
     def closeEvent(self, event):                  # hit window exit "X" button
         qDebug('MainWindow.closeEvent()')
-        reply = QMessageBox.question(self, 'Vraiment', "Quitter et ne rien changer", QMessageBox.No | QMessageBox.Yes, QMessageBox.Yes)
-        if reply == QMessageBox.Yes:
+        reply = QMessageBox.question(self, 'Vraiment', "Quitter et ne rien changer", QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.Yes)
+        if reply == QMessageBox.StandardButton.Yes:
             event.accept()
             self.que.put("")
             super().closeEvent(event)
@@ -170,10 +172,10 @@ class MainWindow(QMainWindow):
             event.ignore()
 
 def wmain(url, isbn, auteurs, titre, que):
-    app = QApplication([])
+    app = QApplication(sys.argv)
     window = MainWindow(url, isbn, auteurs, titre, que)
     window.initial_url(url)
-    app.exec_()
+    app.exec()
 
 if __name__ == '__main__':
     url="https://www.noosfere.org/livres/noosearch.asp"

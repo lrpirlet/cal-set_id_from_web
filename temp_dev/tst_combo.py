@@ -1,9 +1,10 @@
 # spin_combo_boxes.py
 # Import necessary modules
 import sys
-from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QComboBox, QSpinBox, QHBoxLayout, QVBoxLayout)
-from PyQt5.QtGui import QFont
-from PyQt5.QtCore import Qt
+from PyQt6.QtWidgets import (QApplication, QWidget, QLabel, QComboBox, QSpinBox, QHBoxLayout, QVBoxLayout)
+from PyQt6.QtGui import QFont
+from PyQt6.QtCore import Qt
+
 class SelectItems(QWidget):
 
     def __init__(self):
@@ -26,12 +27,15 @@ class SelectItems(QWidget):
         """
         info_label = QLabel("Select the columns to expand the overloaded publisher")
         info_label.setFont(QFont('Arial', 12))
-        info_label.setAlignment(Qt.AlignCenter)
+        info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         # self.display_total_label = QLabel("Total Spent: $")
         # self.display_total_label.setFont(QFont('Arial', 16))
-        # self.display_total_label.setAlignment(Qt.AlignRight)
+        # self.display_total_label.setAlignment(Qt.AlignmentFlag.AlignRight)
         # Create list of food items and add those items to two separate combo boxes
-        lunch_list = ["egg", "turkey sandwich", "ham sandwich", "cheese", "hummus", "yogurt", "apple", "banana", "orange", "waffle", "baby carrots", "bread", "pasta", "crackers", "pretzels", "pita chips", "coffee", "soda", "water"]
+        lunch_list = ["egg", "turkey sandwich", "ham sandwich", "cheese", 
+                      "hummus", "yogurt", "apple", "banana", "orange", "waffle", 
+                      "baby carrots", "bread", "pasta", "crackers", "pretzels", 
+                      "pita chips", "coffee", "soda", "water"]
         
         label_collection = QLabel("#collection name")
         name_collection = QComboBox()
@@ -74,4 +78,4 @@ class SelectItems(QWidget):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = SelectItems()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
