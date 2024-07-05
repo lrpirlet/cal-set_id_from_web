@@ -1,5 +1,5 @@
-The babelio_util plugin
-========================
+The get and set id from web plugin
+==================================
 
 Created just to learn Python... I had fun :-).
 

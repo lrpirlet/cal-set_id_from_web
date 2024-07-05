@@ -92,10 +92,10 @@ class InterfacePlugin(InterfaceAction):
   # remove help file that may have been updated anyway
     with contextlib.suppress(FileNotFoundError): os.remove(os.path.join(tempfile.gettempdir(), "GetAndSetIdFromWeb_doc.html"))
   # remove all trace of an old synchronization file between calibre and the outside process running QWebEngineView
-    for i in glob.glob( os.path.join(tempfile.gettempdir(),"babelio_utl_sync-cal-qweb*")):
+    for i in glob.glob( os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_sync-cal-qweb*")):
             with contextlib.suppress(FileNotFoundError): os.remove(i)
   # remove all trace of a main calibre shutdown file to warn the outside process running QWebEngineView
-    for i in glob.glob( os.path.join(tempfile.gettempdir(),"babelio_utl_terminate-cal-qweb*")):
+    for i in glob.glob( os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_terminate-cal-qweb*")):
             with contextlib.suppress(FileNotFoundError): os.remove(i)
 
     def genesis(self):
@@ -170,9 +170,9 @@ class InterfacePlugin(InterfaceAction):
         if DEBUG : prints("in handle_shutdown()")
         self.do_shutdown = True
         if DEBUG : prints("self.do_shutdown = True")
-        terminate_tpf=tempfile.NamedTemporaryFile(prefix="babelio_utl_terminate-cal-qweb", delete=False)
+        terminate_tpf=tempfile.NamedTemporaryFile(prefix="GetAndSetIdFromWeb_terminate-cal-qweb", delete=False)
         terminate_tpf.close
-        if DEBUG : prints("tmp file babelio_utl_terminate-cal-qweb created")
+        if DEBUG : prints("tmp file GetAndSetIdFromWeb_terminate-cal-qweb created")
 
     def id_frm_url(self, url):
         '''
@@ -201,20 +201,11 @@ class InterfacePlugin(InterfaceAction):
                 pass
         return None
 
-        # if "https://www.babelio.com/livres/" in url:
-        #     bbl_id = url.replace("https://www.babelio.com/livres/","").strip()
-        # if "/" in bbl_id and bbl_id.split("/")[-1].isnumeric():
-        #     # return (self.ID_NAME, bbl_id)
-        #     return (bbl_id)
-        # else:
-        #     return None
-
-
     def run_web_main(self):
         '''
         For the selected books:
         wipe metadata, launch a web-browser to select the desired volumes,
-        set the babelio_id, remove the ISBN (?fire a metadata download?)
+        set the gt_st_id_frm_wb_id, remove the ISBN (?fire a metadata download?)
         '''
         if DEBUG: prints("in run_web_main")
 
@@ -229,28 +220,28 @@ class InterfacePlugin(InterfaceAction):
         if DEBUG : prints("ids : ", ids)
 
       # do the job for one book
-      # babelio_id_recu is true if metadata was updated, false if web_returned no babelio_id
+      # gt_st_id_frm_wb_id_recu is true if metadata was updated, false if web_returned no gt_st_id_frm_wb_id
         nbr_ok = 0
         set_ok = set()
         for book_id in ids:
           # if main calibre does shutdown, stop processing any more book_id
             if not self.do_shutdown:
                 answer = self.run_one_web_main(book_id)
-                babelio_id_recu, more = answer[0], answer[1]
+                gt_st_id_frm_wb_id_recu, more = answer[0], answer[1]
             else:
-                more = False        # if NOT more, babelio_id_recu is False
+                more = False        # if NOT more, gt_st_id_frm_wb_id_recu is False
             if not more:
                 break
           # mark books that have NOT been bypassed... so we can fetch metadata on selected
-            if babelio_id_recu:
+            if gt_st_id_frm_wb_id_recu:
                 nbr_ok += 1
                 set_ok.add(book_id)
                 prints("set_ok", set_ok)
 
       # tell user about what has been done...sorry, NOT if main calibre is closed...
         if not self.do_shutdown:
-            if DEBUG: prints('babelio_id is recorded, metadata is prepared for {} book(s) out of {}'.format(nbr_ok, len(ids)))
-            info_dialog(self.gui, 'babelio_id: enregistré',
+            if DEBUG: prints('gt_st_id_frm_wb_id is recorded, metadata is prepared for {} book(s) out of {}'.format(nbr_ok, len(ids)))
+            info_dialog(self.gui, 'gt_st_id_frm_wb_id: enregistré',
                 'Les métadonnées ont été préparées pour {} livre(s) sur {}'.format(nbr_ok, len(ids)),
                 show=True)
           # new_api does not know anything about marked books, so we use the full db object
@@ -263,7 +254,7 @@ class InterfacePlugin(InterfaceAction):
         '''
         For the books_id:
         wipe metadata, launch a web-browser to select the desired volumes,
-        set the babelio_id, remove the ISBN (?fire a metadata download?)
+        set the gt_st_id_frm_wb_id, remove the ISBN (?fire a metadata download?)
         '''
         if DEBUG: prints("in run_one_web_main")
 
@@ -302,13 +293,13 @@ class InterfacePlugin(InterfaceAction):
             if DEBUG: prints("webengine-dialog process submitted")          # WARNING: "webengine-dialog" is a defined function in calibre\src\calibre\utils\ipc\worker.py ...DO NOT CHANGE...
       # wait for web_main.py to settle and create a temp file to synchronize QWebEngineView with calibre...
       # watch out, self.do_shutdown is set by a signal, any time...
-        while not (self.do_shutdown or glob.glob(os.path.join(tempfile.gettempdir(),"babelio_utl_sync-cal-qweb*"))):
+        while not (self.do_shutdown or glob.glob(os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_sync-cal-qweb*"))):
             loop = QEventLoop()
             QTimer.singleShot(200, loop.quit)
             loop.exec_()
       # wait till file is removed but loop fast enough for a user to feel the operation instantaneous...
       # watch out, self.do_shutdown is set by a signal, any time...
-        while (not self.do_shutdown) and (glob.glob(os.path.join(tempfile.gettempdir(),"babelio_utl_sync-cal-qweb*"))):
+        while (not self.do_shutdown) and (glob.glob(os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_sync-cal-qweb*"))):
             loop = QEventLoop()
             QTimer.singleShot(200, loop.quit)
             loop.exec_()
@@ -317,26 +308,26 @@ class InterfacePlugin(InterfaceAction):
           # sync file is gone, meaning QWebEngineView process is closed so, we can collect the result, bypass if shutdown_started
             with open(os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_report_url"), "r", encoding="utf_8") as tpf:
                 returned_url = tpf.read()
-            if DEBUG: prints("gagaga returned_url", returned_url)
+            if DEBUG: prints("returned_url", returned_url)
 
             if returned_url:
                 if "aborted" in returned_url:
                     if DEBUG: prints('aborted, no change will take place...')
-                    return (False, True)                                # babelio_id NOT received, more book
+                    return (False, True)                                # gt_st_id_frm_wb_id NOT received, more book
                 elif "killed" in returned_url:
                     if DEBUG: prints('killed, no change will take place...')
-                    return (False, False)                               # babelio_id NOT received, NO more book
+                    return (False, False)                               # gt_st_id_frm_wb_id NOT received, NO more book
                 else:
                     try:
-                        id_name, babelio_id = self.id_frm_url(returned_url)
+                        id_name, gt_st_id_frm_wb_id = self.id_frm_url(returned_url)
                     except:
                         if DEBUG: prints('no id could be extracted from url, no change will take place...')
-                        return (False, True)                                # babelio_id NOT received, more book
+                        return (False, True)                                # gt_st_id_frm_wb_id NOT received, more book
             
         if self.do_shutdown:
             return(False,False)                             # shutdown_started, do not try to change db
-        elif babelio_id:
-          # set the babelio_id, reset most metadata...
+        elif gt_st_id_frm_wb_id:
+          # set the gt_st_id_frm_wb_id, reset most metadata...
             for key in mi.custom_field_keys():
                 display_name, val, oldval, fm = mi.format_field_extended(key)
                 if self.coll_srl_name == key : cstm_coll_srl_fm=fm
@@ -345,7 +336,7 @@ class InterfacePlugin(InterfaceAction):
             mi.series=""
             mi.language=""
             mi.pubdate=UNDEFINED_DATE
-            mi.set_identifier(id_name, babelio_id)
+            mi.set_identifier(id_name, gt_st_id_frm_wb_id)
             mi.set_identifier('isbn', "")
             if cstm_coll_srl_fm:
                 cstm_coll_srl_fm["#value#"] = ""
@@ -355,15 +346,15 @@ class InterfacePlugin(InterfaceAction):
                 mi.set_user_metadata(self.collection_name, cstm_collection_fm)
           # commit the change, force reset of the above fields, leave the others alone
             db.set_metadata(book_id, mi, force_changes=True)
-            return (True, True)                                 # babelio_id received, more book
+            return (True, True)                                 # gt_st_id_frm_wb_id received, more book
 
     def wipe_selected_metadata(self):
         '''
         For all selected book
         Deletes publisher, tags, series, rating, self.coll_srl_name (#coll_srl),
         self.collection_name (#collection), and any ID except ISBN. All other fields are supposed
-        to be overwritten when new metadata is downloaded from babelio.
-        Later, ISBN will be wiped just before babelio_id (and maybe ISBN) is written.
+        to be overwritten when new metadata is downloaded.
+        Later, ISBN will be wiped just before gt_st_id_frm_wb_id (and maybe ISBN) is written.
         '''
         if DEBUG: prints("in wipe_selected_metadata")
 
@@ -401,7 +392,7 @@ class InterfacePlugin(InterfaceAction):
             mi.series=""
             mi.language=""
             mi.pubdate=UNDEFINED_DATE
-            mi.set_identifier('babelio_id', "")
+            mi.set_identifier('gt_st_id_frm_wb_id', "")
             if cstm_coll_srl_fm:
                 cstm_coll_srl_fm["#value#"] = ""
                 mi.set_user_metadata(self.coll_srl_name, cstm_coll_srl_fm)
@@ -554,7 +545,7 @@ class InterfacePlugin(InterfaceAction):
             mi.publisher=""
             mi.series=""
             mi.language=""
-            mi.set_identifier('babelio_id', "")
+            mi.set_identifier('gt_st_id_frm_wb_id', "")
 
             if cstm_coll_srl_fm:
                 cstm_coll_srl_fm["#value#"] = ""

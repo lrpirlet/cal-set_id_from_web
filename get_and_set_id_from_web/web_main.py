@@ -180,7 +180,7 @@ class MainWindow(QMainWindow):
     def set_isbn_box(self):        # info boxes isbn
         print("in set_isbn_box")
         self.isbn_btn = QPushButton(" ISBN ", self)
-        self.isbn_btn.setToolTip('Action sur la page initiale: "Mots-clefs à rechercher" = ISBN, coche la case "Livre".')
+        self.isbn_btn.setToolTip('Action : "Mots-clefs à rechercher" = ISBN, est copié dans le presse-papiers.')
                                    # Action on home page: "Mots-clefs à rechercher" = ISBN, set checkbox "Livre".
         self.isbn_dsp = QLineEdit()
         self.isbn_dsp.setReadOnly(True)
@@ -195,7 +195,7 @@ class MainWindow(QMainWindow):
     def set_auteurs_box(self):                  # info boxes auteurs
         print("in set_auteurs_box")
         self.auteurs_btn = QPushButton("Auteur(s)", self)
-        self.auteurs_btn.setToolTip('Action sur la page babelio initiale: "Mots-clefs à rechercher" = Auteur(s), coche la case "Auteurs".')
+        self.auteurs_btn.setToolTip('Action : "Mots-clefs à rechercher" = Auteur(s), est copié dans le presse-papiers.')
                                       # Action on home page: "Mots-clefs à rechercher" = Auteur(s), set checkbox "Auteurs".
         self.auteurs_dsp = QLineEdit()
         self.auteurs_dsp.setReadOnly(True)
@@ -209,7 +209,7 @@ class MainWindow(QMainWindow):
     def set_titre_box(self):                    # info boxes titre
         print("in set_titre_box")
         self.titre_btn = QPushButton("Titre", self)
-        self.titre_btn.setToolTip('Action sur la page babelio initiale: "Mots-clefs à rechercher" = Titre, coche la case "Livres".')
+        self.titre_btn.setToolTip('Action : "Mots-clefs à rechercher" = Titre, est copié dans le presse-papiers.')
                                     # Action on home page: "Mots-clefs à rechercher" = Titre, set checkbox "Livres".
         self.titre_dsp = QLineEdit()
         self.titre_dsp.setReadOnly(True)
@@ -253,27 +253,27 @@ class MainWindow(QMainWindow):
         self.addToolBar(nav_tb)
 
         back_btn = QAction(get_icons('blue_icon/back.png'), "Back", self)
-        back_btn.setToolTip("On revient à la page précédente")                    # Back to the previous page
+        back_btn.setToolTip("On revient à la page précédente")                      # Back to the previous page
         back_btn.triggered.connect(self.browser.back)
         nav_tb.addAction(back_btn)
 
         next_btn = QAction(get_icons('blue_icon/forward.png'), "Forward", self)
-        next_btn.setToolTip("On retourne à la page suivante")                     # Back to the next page
+        next_btn.setToolTip("On retourne à la page suivante")                       # Back to the next page
         next_btn.triggered.connect(self.browser.forward)
         nav_tb.addAction(next_btn)
 
         reload_btn = QAction(get_icons('blue_icon/reload.png'), "Reload", self)
-        reload_btn.setToolTip("On recharge la page présente")                     # Reload the page
+        reload_btn.setToolTip("On recharge la page présente")                       # Reload the page
         reload_btn.triggered.connect(self.browser.reload)
         nav_tb.addAction(reload_btn)
 
         home_btn = QAction(get_icons('blue_icon/home.png'), "Home", self)
-        home_btn.setToolTip("On va à la page recherche avancée de babelio")           # We go to the search page of babelio
+        home_btn.setToolTip("On va à la page home")                                 # We go home
         home_btn.triggered.connect(self.navigate_home)
         nav_tb.addAction(home_btn)
 
         stop_btn = QAction(get_icons('blue_icon/stop.png'), "Stop", self)
-        stop_btn.setToolTip("On arrête de charger la page")                       # Stop loading the page
+        stop_btn.setToolTip("On arrête de charger la page")                         # Stop loading the page
         stop_btn.triggered.connect(self.browser.stop)
         nav_tb.addAction(stop_btn)
 
@@ -287,8 +287,8 @@ class MainWindow(QMainWindow):
 
         self.urlbox = QLineEdit()
         self.urlbox.returnPressed.connect(self.navigate_to_url)
-        self.urlbox.setToolTip("On peut même introduire une adresse, hors babelio, mais A TES RISQUES ET PERILS... babelio est sûr (https://), la toile par contre...")
-                                # You can even enter an address, outside of babelio, but AT YOUR OWN RISK... babelio is safe: (https://), the web on the other side...
+        self.urlbox.setToolTip("On peut même introduire une adresse quelconque mais, comme toujours, A TES RISQUES ET PERILS... Il n'y a pas de filtre malware dans ce browser")
+                                # You can even enter any address you like, but as always, AT YOUR OWN RISK... No malware filtering in this browser.
         nav_tb.addWidget(self.urlbox)
 
         abort_btn = QAction(get_icons('blue_icon/abort.png'), "Abort", self)
@@ -364,7 +364,7 @@ class MainWindow(QMainWindow):
 
     def navigate_home(self):
         print("in navigate_home")
-        self.browser.setUrl(QUrl("https://www.babelio.com/recherche"))
+        self.browser.setUrl(QUrl("https://www.google.com"))      # home for the 'get and set id from web' browser 
 
     def navigate_to_url(self):                    # Does not receive the Url, activated when url bar is manually changed
         print("in navigate_to_url")
@@ -412,7 +412,7 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(1000, wait_a_minut)
 
     def select_and_exit(self):                    # sent response over report_returned_url file in temp dir
-      # create a temp file with name ( now starting with babelio_id)
+      # create a temp file with name ( now starting with gt_st_id_frm_wb_id)
         print("in select_and_exit")
         self.report_returned_url(self.urlbox.text())
         selected_url = self.urlbox.text()            # get url displayed in urlbox
@@ -449,7 +449,7 @@ class MainWindow(QMainWindow):
             event.ignore()
 
     def chk_for_shutdown(self):                     # presence of such file means that calibre shutdown
-        if glob.glob(os.path.join(tempfile.gettempdir(),"babelio_utl_terminate-cal-qweb*")):
+        if glob.glob(os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_terminate-cal-qweb*")):
             print("WebEngineView was closed: killed")
             self.report_returned_url("killed")       # report main calibre shutdown
             Application.instance().exit()           # exit application...
@@ -459,7 +459,7 @@ class MainWindow(QMainWindow):
 def main(data):
 
     # create a temp file... while it exists launcher program will wait... this file will disappear with the process
-    sync_tpf=tempfile.NamedTemporaryFile(prefix="babelio_utl_sync-cal-qweb")
+    sync_tpf=tempfile.NamedTemporaryFile(prefix="GetAndSetIdFromWeb_sync-cal-qweb")
 
     # retrieve component from data
     #        data = [url, isbn, auteurs, titre]
