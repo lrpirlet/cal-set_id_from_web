@@ -7,8 +7,7 @@ __copyright__ = '2022, Louis Richard Pirlet'
 from qt.core import (pyqtSlot, QUrl, QSize, Qt, pyqtSignal, QTimer,
     QMainWindow, QToolBar, QAction, QLineEdit, QStatusBar, QProgressBar,
     QMessageBox, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QShortcut,
-    QKeySequence, QIcon)
+    QPushButton, QShortcut, QClipboard, QKeySequence, QIcon)
 
 from qt.webengine import QWebEngineView, QWebEnginePage
 
@@ -114,8 +113,8 @@ class Search_Panel(QWidget):
 class MainWindow(QMainWindow):
     """
     this process, running in the calibre environment, is detached from calibre program
-    It does receive data from noofere_util, processes it, then communicates back the result and dies.
-    In fact this is a WEB browser centered on www.babelio.com to get the selected_url of the choosen book.
+    It does receive data from set_id_from_web, processes it, then communicates back the result and dies.
+    In fact this is a very basic WEB browser to report the selected_url of the choosen book.
 
     """
 
@@ -127,7 +126,7 @@ class MainWindow(QMainWindow):
         logging.basicConfig(
         level = logging.DEBUG,
         format = '%(asctime)s:%(levelname)s:%(name)s:%(message)s',
-        filename = os.path.join(tempfile.gettempdir(), 'babelio_utl-web_main.log'),
+        filename = os.path.join(tempfile.gettempdir(), 'GetAndSetIdFromWeb.log'),
         filemode = 'a')
         stdout_logger = logging.getLogger('STDOUT')
         sl = StreamToLogger(stdout_logger, logging.INFO)
@@ -181,7 +180,7 @@ class MainWindow(QMainWindow):
     def set_isbn_box(self):        # info boxes isbn
         print("in set_isbn_box")
         self.isbn_btn = QPushButton(" ISBN ", self)
-        self.isbn_btn.setToolTip('Action sur la page babelio initiale: "Mots-clefs à rechercher" = ISBN, coche la case "Livre".')
+        self.isbn_btn.setToolTip('Action sur la page initiale: "Mots-clefs à rechercher" = ISBN, coche la case "Livre".')
                                    # Action on home page: "Mots-clefs à rechercher" = ISBN, set checkbox "Livre".
         self.isbn_dsp = QLineEdit()
         self.isbn_dsp.setReadOnly(True)
@@ -332,8 +331,9 @@ class MainWindow(QMainWindow):
   # info boxes actions
     @pyqtSlot()
     def set_noosearch_page(self, iam):
-        print("in set_noosearch_page iam : {}".format(iam))
-        if self.urlbox.text() == "https://www.babelio.com/recherche" :
+        print(f"in set_noosearch_page iam : {iam}")
+        print(f"self.urlbox.text() : {self.urlbox.text()}")
+        if self.urlbox.text() == "https://www.noosfere.org/livres/noosearch.asp" :
             if iam == "isbn": val = self.isbn
             elif iam == "auteurs": val = self.auteurs
             else: val = self.titre
@@ -345,7 +345,12 @@ class MainWindow(QMainWindow):
                 self.browser.page().runJavaScript("document.getElementsByName('livres')[0].checked = true")
                 self.browser.page().runJavaScript("document.getElementsByName('auteurs')[0].checked = false")
         else:
-            pass
+            cb = Application.clipboard()
+            print(type(cb))
+            cb.clear(mode=cb.Mode.Clipboard)
+            if iam == "isbn": cb.setText(self.isbn.replace("-","") + " ", mode=cb.Mode.Clipboard)
+            elif iam == "auteurs": cb.setText(self.auteurs + " ", mode=cb.Mode.Clipboard)
+            else: cb.setText(self.titre + " ", mode=cb.Mode.Clipboard)
 
     @pyqtSlot()
     def wake_search_panel(self):
@@ -386,7 +391,7 @@ class MainWindow(QMainWindow):
 
     def report_returned_url(self, returned_url):
         print("in report_returned_url returned_url : {}".format(returned_url))
-        with open(os.path.join(tempfile.gettempdir(),"babelio_utl_report_returned_url"),"w",encoding="utf_8") as report_tpf:
+        with open(os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_report_url"),"w",encoding="utf_8") as report_tpf:
             report_tpf.write(returned_url)
 
     def set_progress_bar(self):
@@ -462,7 +467,7 @@ def main(data):
     # Start QWebEngineView and associated widgets
     app = Application([])
     window = MainWindow(data)
-    window.initial_url(url)     # supposed to be babelio advanced search page, fixed by launcher program
+    window.initial_url(url)     # supposed to be a valid page, fixed by launcher program
     app.exec()
 
     # signal launcher program that we are finished
@@ -487,7 +492,7 @@ if __name__ == '__main__':
     def get_icons(text):
         return QIcon(text)
 
-    with open (os.path.join(tempfile.gettempdir(),"babelio_utl_report_returned_url"), "r",encoding='utf_8') as tf:
+    with open (os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_report_url"), "r",encoding='utf_8') as tf:
         returned_url = tf.read()
 
   # from here should modify the metadata, or not.

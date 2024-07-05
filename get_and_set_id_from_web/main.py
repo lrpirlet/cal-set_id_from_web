@@ -11,7 +11,7 @@ from calibre.constants import DEBUG
 from calibre.gui2 import open_url, error_dialog, info_dialog
 from calibre.gui2.actions import InterfaceAction, menu_action_unique_name
 from calibre.utils.date import UNDEFINED_DATE
-from calibre_plugins.set_id_manually_from_webengine.config import prefs
+from calibre_plugins.get_and_set_id_from_web.config import prefs
 
 from qt.core import (QMenu, QMessageBox, QToolButton, QUrl, QEventLoop, QTimer)
 
@@ -76,9 +76,9 @@ def create_menu_action_unique(ia, parent_menu, menu_text, image=None, tooltip=No
 
 class InterfacePlugin(InterfaceAction):
 
-    name = 'set id from web'
+    name = 'get and set id from web'
 
-    action_spec = ("set id from web", None,
+    action_spec = ("get and set id from web", None,
             "lance un webengine to set the ID manually", None)
     popup_type = QToolButton.InstantPopup
     action_add_menu = True
@@ -88,9 +88,9 @@ class InterfacePlugin(InterfaceAction):
     do_shutdown = False                 # assume main calibre does NOT shutdown
 
   # remove previous log files for web_main process in the temp dir
-    with contextlib.suppress(FileNotFoundError): os.remove(os.path.join(tempfile.gettempdir(), 'babelio_utl-web_main.log'))
+    with contextlib.suppress(FileNotFoundError): os.remove(os.path.join(tempfile.gettempdir(), 'GetAndSetIdFromWeb.log'))
   # remove help file that may have been updated anyway
-    with contextlib.suppress(FileNotFoundError): os.remove(os.path.join(tempfile.gettempdir(), "babelio_utl_doc.html"))
+    with contextlib.suppress(FileNotFoundError): os.remove(os.path.join(tempfile.gettempdir(), "GetAndSetIdFromWeb_doc.html"))
   # remove all trace of an old synchronization file between calibre and the outside process running QWebEngineView
     for i in glob.glob( os.path.join(tempfile.gettempdir(),"babelio_utl_sync-cal-qweb*")):
             with contextlib.suppress(FileNotFoundError): os.remove(i)
@@ -102,7 +102,7 @@ class InterfacePlugin(InterfaceAction):
       # get_icons and get_resources are partially defined function (zip location is defined)
       # those are known when genesis is called by calibre
         icon = get_icons('blue_icon/top_icon.png')
-      # qaction is created and made available by calibre for set_id_manually_from_webengine
+      # qaction is created and made available by calibre for get_and_set_id_from_web
         self.qaction.setIcon(icon)
       # load the prefs so that they are available
         self.collection_name = prefs["COLLECTION_NAME"]
@@ -150,20 +150,22 @@ class InterfacePlugin(InterfaceAction):
 
     def handle_shutdown(self):
         '''
-        It is possible to kill (main) calibre while the (set_id_manually_from_webengine) web_browser detached process
-        is still running. If a book is selected, then probability to hang (main) calibre is very high,
-        preventing restarting calibre. A process named "The main calibre program" is still running...
+        It is possible to kill (main) calibre while the (get_and_set_id_from_web) web_browser 
+        detached process is still running. If a book is selected, then probability to hang (main) calibre
+        is very high, preventing to restart calibre.
+        A process named "The main calibre program" is still running...
         The workaroundis to kill this process or to reboot...
 
         To avoid this situation, A signal named "shutdown_started" was implemented so that something
-        like 2 seconds are available to the (set_id_manually_from_webengine) web_browser detached process cleanly.
+        like 2 seconds are available to the (get_and_set_id_from_web) web_browser detached process 
+        to shutdown cleanly.
 
         The handle_shutdown(), triggered by the signal, do create a temp file that tells
         the web_browser detached process, to terminate, simulating the user aborting...
         At the same time, the handle_shutdown() will simulate the answer from the web_browser detached
         process to speed-up the reaction...
 
-        Some temporary files will be left behind that will be killed at next invocation of set_id_manually_from_webengine.
+        Some temporary files will be left behind that will be killed at next invocation of get_and_set_id_from_web.
         '''
         if DEBUG : prints("in handle_shutdown()")
         self.do_shutdown = True
@@ -288,15 +290,15 @@ class InterfacePlugin(InterfaceAction):
         titre = mi.title
         data = [url, isbn, auteurs, titre]
         if DEBUG:
-            prints(" url is a string : ", isinstance(url, str))
-            prints(" isbn is a string : ", isinstance(isbn, str))
+            prints(" url is a string :     ", isinstance(url, str))
+            prints(" isbn is a string :    ", isinstance(isbn, str))
             prints(" auteurs is a string : ", isinstance(auteurs, str))
-            prints(" titre is a string : ", isinstance(titre, str))
+            prints(" titre is a string :   ", isinstance(titre, str))
 
       # unless shutdown_started signal asserted
         if not self.do_shutdown:
           # Launch a separate process to view the URL in WebEngine
-            self.gui.job_manager.launch_gui_app('webengine-dialog', kwargs={'module':'calibre_plugins.set_id_manually_from_webengine.web_main', 'data':data})
+            self.gui.job_manager.launch_gui_app('webengine-dialog', kwargs={'module':'calibre_plugins.get_and_set_id_from_web.web_main', 'data':data})
             if DEBUG: prints("webengine-dialog process submitted")          # WARNING: "webengine-dialog" is a defined function in calibre\src\calibre\utils\ipc\worker.py ...DO NOT CHANGE...
       # wait for web_main.py to settle and create a temp file to synchronize QWebEngineView with calibre...
       # watch out, self.do_shutdown is set by a signal, any time...
@@ -313,12 +315,24 @@ class InterfacePlugin(InterfaceAction):
       # unless shutdown_started signal asserted
         if not self.do_shutdown:
           # sync file is gone, meaning QWebEngineView process is closed so, we can collect the result, bypass if shutdown_started
-            with open(os.path.join(tempfile.gettempdir(),"babelio_utl_report_returned_url"), "r", encoding="utf_8") as tpf:
+            with open(os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_report_url"), "r", encoding="utf_8") as tpf:
                 returned_url = tpf.read()
-            if DEBUG: prints("returned_url", returned_url)
-            id_name, babelio_id = self.id_frm_url(returned_url)
-            if not babelio_id: returned_url = 'not set'
+            if DEBUG: prints("gagaga returned_url", returned_url)
 
+            if returned_url:
+                if "aborted" in returned_url:
+                    if DEBUG: prints('aborted, no change will take place...')
+                    return (False, True)                                # babelio_id NOT received, more book
+                elif "killed" in returned_url:
+                    if DEBUG: prints('killed, no change will take place...')
+                    return (False, False)                               # babelio_id NOT received, NO more book
+                else:
+                    try:
+                        id_name, babelio_id = self.id_frm_url(returned_url)
+                    except:
+                        if DEBUG: prints('no id could be extracted from url, no change will take place...')
+                        return (False, True)                                # babelio_id NOT received, more book
+            
         if self.do_shutdown:
             return(False,False)                             # shutdown_started, do not try to change db
         elif babelio_id:
@@ -342,18 +356,6 @@ class InterfacePlugin(InterfaceAction):
           # commit the change, force reset of the above fields, leave the others alone
             db.set_metadata(book_id, mi, force_changes=True)
             return (True, True)                                 # babelio_id received, more book
-        elif 'not set' in returned_url:
-            if DEBUG: prints('no id could be extracted from url, no change will take place...')
-            return (False, True)                                # babelio_id NOT received, more book
-        elif "aborted" in returned_url:
-            if DEBUG: prints('aborted, no change will take place...')
-            return (False, True)                                # babelio_id NOT received, more book
-        elif "killed" in returned_url:
-            if DEBUG: prints('killed, no change will take place...')
-            return (False, False)                               # babelio_id NOT received, NO more book
-        else:
-            if DEBUG: prints("should not ends here... returned_url : ", returned_url)
-            return (False, False)                               # STOP everything program error
 
     def wipe_selected_metadata(self):
         '''
@@ -416,7 +418,7 @@ class InterfacePlugin(InterfaceAction):
                 show=True)
 
       # select all and only those that have been cleaned... for a possible futher action
-      # such as metadata download from calibre or choice of the volume from set_id_manually_from_webengine
+      # such as metadata download from calibre or choice of the volume from get_and_set_id_from_web
         self.gui.current_db.set_marked_ids(ids)
         self.gui.search.setEditText('marked:true')
         self.gui.search.do_search()
@@ -473,7 +475,7 @@ class InterfacePlugin(InterfaceAction):
             if DEBUG: prints("Okay, Houston...we've had a problem here (Apollo 13)")
             info_dialog(self.gui, 'Colonne inexistante',
                 "<p> L'une ou l'autre colonne ou même les deux n'existe(nt) pas... Veuillez y remédier.</p>"
-                "<p> On peut utiliser <strong>set_id_manually_from_webengine</strong>, pour <strong>personnaliser l'extension</strong>.</p>",
+                "<p> On peut utiliser <strong>get_and_set_id_from_web</strong>, pour <strong>personnaliser l'extension</strong>.</p>",
                 show=True)
             return False
         return True
@@ -580,7 +582,7 @@ class InterfacePlugin(InterfaceAction):
     def show_help(self):
          # Extract on demand the help file resource to a temp file
         def get_help_file_resource():
-          # keep "babelio_utl_doc.html" as the last item in the list, this is the help entry point
+          # keep "GetAndSetIdFromWeb_doc.html" as the last item in the list, this is the help entry point
           # we need both files for the help
             file_path = os.path.join(tempfile.gettempdir(), "set_id_manually_from_webengine_web_075.png")
             file_data = self.load_resources('doc/' + "set_id_manually_from_webengine_web_075.png")['doc/' + "set_id_manually_from_webengine_web_075.png"]
@@ -588,8 +590,8 @@ class InterfacePlugin(InterfaceAction):
             with open(file_path,'wb') as fpng:
                 fpng.write(file_data)
 
-            file_path = os.path.join(tempfile.gettempdir(), "babelio_utl_doc.html")
-            file_data = self.load_resources('doc/' + "babelio_utl_doc.html")['doc/' + "babelio_utl_doc.html"]
+            file_path = os.path.join(tempfile.gettempdir(), "GetAndSetIdFromWeb_doc.html")
+            file_data = self.load_resources('doc/' + "GetAndSetIdFromWeb_doc.html")['doc/' + "GetAndSetIdFromWeb_doc.html"]
             if DEBUG: prints('show_help - file_path:', file_path)
             with open(file_path,'wb') as fhtm:
                 fhtm.write(file_data)
@@ -603,11 +605,11 @@ class InterfacePlugin(InterfaceAction):
         text += ("\nLe nom de la collection par l'éditeur est : {},"
                 "\nLe numéro d'ordre dans la collection par l'éditeur "
                 "est : {}".format(self.collection_name,self.coll_srl_name)).encode('utf-8')
-        QMessageBox.about(self.gui, 'About the set_id_manually_from_webengine',
+        QMessageBox.about(self.gui, 'About the get_and_set_id_from_web',
                 text.decode('utf-8'))
 
     def apply_settings(self):
-        from calibre_plugins.set_id_manually_from_webengine.config import prefs
+        from calibre_plugins.get_and_set_id_from_web.config import prefs
         # In an actual non trivial plugin, you would probably need to
         # do something based on the settings in prefs
         if DEBUG: prints("in apply_settings")

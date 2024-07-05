@@ -121,16 +121,19 @@ class MainWindow(QMainWindow):
         self.infobox.setText( self.isbn )
         cb = QApplication.clipboard()
         cb.clear(mode=cb.Mode.Clipboard)
-        cb.setText(self.isbn.replace("-",""), mode=cb.Mode.Clipboard)
+        cb.setText(self.isbn.replace("-","") + " ", mode=cb.Mode.Clipboard)
 
     def set_auteurs_info(self):
         self.infobox.setText( self.auteurs )
         cb = QApplication.clipboard()
         cb.clear(mode=cb.Mode.Clipboard)
-        cb.setText(self.auteurs, mode=cb.Mode.Clipboard)
+        cb.setText(self.auteurs + " ", mode=cb.Mode.Clipboard)
 
     def set_titre_info(self):
         self.infobox.setText( self.titre )
+        cb = QApplication.clipboard()
+        cb.clear(mode=cb.Mode.Clipboard)
+        cb.setText(self.titre + " ", mode=cb.Mode.Clipboard)
 
   # Navigation actions
     def initial_url(self,url="http://www.google.com"):
@@ -186,6 +189,6 @@ if __name__ == '__main__':
     prc = Process(target=wmain, args=(url, isbn, auteurs, titre, que))
     prc.start()
     response = que.get()
-    print("In main, la dernier url est: ", response, "len",  len(response), "type", type(response))
+    print("In main, la dernier url est: ", response, "\nlen",  len(response), "type", type(response))
     prc.join()
 

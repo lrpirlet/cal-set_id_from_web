@@ -17,7 +17,7 @@ from calibre.gui2.ui import get_gui
 from calibre.gui2.preferences.create_custom_column import CreateNewCustomColumn
 from calibre.utils.config import JSONConfig
 
-prefs = JSONConfig('plugins/set_id_manually_from_webengine')
+prefs = JSONConfig('plugins/get_and_set_id_manually_from_web')
 
 # Set defaults
 prefs.defaults["COLLECTION_NAME"] = "#collection"
