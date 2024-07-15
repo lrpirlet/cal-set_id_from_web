@@ -7,7 +7,7 @@ __copyright__ = '2021, Louis Richard Pirlet'
 from pickle import FALSE
 from typing import Collection
 from calibre import prints
-from calibre.constants import DEBUG
+from calibre.constants import cache_dir, DEBUG
 from calibre.gui2 import open_url, error_dialog, info_dialog
 from calibre.gui2.actions import InterfaceAction, menu_action_unique_name
 from calibre.utils.date import UNDEFINED_DATE
@@ -73,11 +73,9 @@ def create_menu_action_unique(ia, parent_menu, menu_text, image=None, tooltip=No
         if is_checked:
             ac.setChecked(True)
     return ac
-
 class InterfacePlugin(InterfaceAction):
 
     name = 'get and set id from web'
-
     action_spec = ("get and set id from web", None,
             "lance un webengine to set the ID manually", None)
     popup_type = QToolButton.InstantPopup
@@ -97,6 +95,19 @@ class InterfacePlugin(InterfaceAction):
   # remove all trace of a main calibre shutdown file to warn the outside process running QWebEngineView
     for i in glob.glob( os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_terminate-cal-qweb*")):
             with contextlib.suppress(FileNotFoundError): os.remove(i)
+  # if size of the "browser_storage_folder = os.path.join(cache_dir(), 'getandsetidfromweb')"
+  # is too big (15 MBytes), delete it... I do not want clutering the calibre cache nor do
+  # I want to depend on the temporary folders (that may be deleted at any boot)
+    total_size = 0
+    for dirpath, dirnames, filenames in os.walk(os.path.join(cache_dir(), 'getandsetidfromweb')):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            if not os.path.islink(fp):  # Skip symbolic links
+                total_size += os.path.getsize(fp)
+    prints(f"total_size of{os.path.join(cache_dir(), 'getandsetidfromweb')} is : {total_size} bytes, remove it.")
+    if total_size >= 15728640:
+        import shutil
+        shutil.rmtree(os.path.join(cache_dir(), 'getandsetidfromweb'))
 
     def genesis(self):
       # get_icons and get_resources are partially defined function (zip location is defined)
@@ -111,7 +122,6 @@ class InterfacePlugin(InterfaceAction):
         self.build_menus()
       # here we process shutdown_started signal
         self.gui.shutdown_started.connect(self.handle_shutdown)
-
 
     def build_menus(self):
         self.menu = QMenu(self.gui)
@@ -186,16 +196,12 @@ class InterfacePlugin(InterfaceAction):
 
         bbl_id = ""
         for plugin in all_metadata_plugins():
-            if DEBUG: prints(f"plugin is {plugin}")     # lrp
+            if DEBUG: prints(f"plugin is {plugin}")
             try:
-                if DEBUG: prints(f"identifier is {plugin.id_from_url(url)}")     # lrp
+                if DEBUG: prints(f"identifier is {plugin.id_from_url(url)}")
                 identifier = plugin.id_from_url(url)
                 if identifier:
-                    prints(f"identifier : {identifier}")    # lrp
-                    # vals = self.current_val
-                    # vals[identifier[0]] = identifier[1]
-                    # self.current_val = vals
-                    # return True
+                    prints(f"identifier : {identifier}")
                     return identifier
             except Exception:
                 pass
@@ -281,10 +287,10 @@ class InterfacePlugin(InterfaceAction):
         titre = mi.title
         data = [url, isbn, auteurs, titre]
         if DEBUG:
-            prints(" url is a string :     ", isinstance(url, str))
-            prints(" isbn is a string :    ", isinstance(isbn, str))
-            prints(" auteurs is a string : ", isinstance(auteurs, str))
-            prints(" titre is a string :   ", isinstance(titre, str))
+            prints(" url is a string :         ", isinstance(url, str))
+            prints(" isbn is a string :        ", isinstance(isbn, str))
+            prints(" auteurs is a string :     ", isinstance(auteurs, str))
+            prints(" titre is a string :       ", isinstance(titre, str))
 
       # unless shutdown_started signal asserted
         if not self.do_shutdown:
@@ -337,7 +343,7 @@ class InterfacePlugin(InterfaceAction):
             mi.language=""
             mi.pubdate=UNDEFINED_DATE
             mi.set_identifier(id_name, gt_st_id_frm_wb_id)
-            mi.set_identifier('isbn', "")
+            # mi.set_identifier('isbn', "")     # no need to remove isbn: will be overwritten if found by Metadata plugin
             if cstm_coll_srl_fm:
                 cstm_coll_srl_fm["#value#"] = ""
                 mi.set_user_metadata(self.coll_srl_name, cstm_coll_srl_fm)
@@ -354,7 +360,6 @@ class InterfacePlugin(InterfaceAction):
         Deletes publisher, tags, series, rating, self.coll_srl_name (#coll_srl),
         self.collection_name (#collection), and any ID except ISBN. All other fields are supposed
         to be overwritten when new metadata is downloaded.
-        Later, ISBN will be wiped just before gt_st_id_frm_wb_id (and maybe ISBN) is written.
         '''
         if DEBUG: prints("in wipe_selected_metadata")
 
@@ -555,7 +560,6 @@ class InterfacePlugin(InterfaceAction):
                 mi.set_user_metadata(self.collection_name, cstm_collection_fm)
 
             # db.set_metadata(book_id, mi, force_changes=True) # BUT I will NOT change anything...
-
 
         info_dialog(self.gui, 'exposed data',
                 'Exposed the metadata of {} book(s)'.format(len(ids)),

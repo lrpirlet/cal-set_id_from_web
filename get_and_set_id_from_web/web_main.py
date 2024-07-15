@@ -9,7 +9,7 @@ from qt.core import (pyqtSlot, QUrl, QSize, Qt, pyqtSignal, QTimer,
     QMessageBox, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QShortcut, QClipboard, QKeySequence, QIcon)
 
-from qt.webengine import QWebEngineView, QWebEnginePage
+from qt.webengine import QWebEngineView, QWebEnginePage, QWebEngineProfile
 
 # from PyQt5.QtCore import pyqtSlot, QUrl, QSize, Qt, pyqtSignal, QTimer
 # from PyQt5.QtWidgets import (QMainWindow, QToolBar, QAction, QLineEdit, QStatusBar, QProgressBar,
@@ -34,7 +34,7 @@ from qt.webengine import QWebEngineView, QWebEnginePage
 # )
 
 from calibre.gui2 import Application
-from calibre.constants import cache_dir                             # lrp
+from calibre.constants import cache_dir 
 
 from json import dumps
 from functools import partial
@@ -113,9 +113,12 @@ class Search_Panel(QWidget):
 class MainWindow(QMainWindow):
     """
     this process, running in the calibre environment, is detached from calibre program
-    It does receive data from set_id_from_web, processes it, then communicates back the result and dies.
+    It does receive data from set_id_from_web, processes it, then communicates back the 
+    result and dies. Data received is title, author and ISDN; data reurned is one or more IDs
+    related to the book and/or one or more fake unique title ?using actual date/time?, 
+    associated with an id so that a new book may be created. (example: missing book in a series) 
     In fact this is a very basic WEB browser to report the selected_url of the choosen book.
-
+    To debug web_main do set self.dbg = True
     """
 
     def __init__(self, data):
@@ -135,12 +138,13 @@ class MainWindow(QMainWindow):
         sl = StreamToLogger(stderr_logger, logging.ERROR)
         sys.stderr = sl
 
-        print(f"I want to verifiy I know cache_dir(): {cache_dir()}")   # lrp
-
       # data = [url, isbn, auteurs, titre]
         self.isbn, self.auteurs, self.titre = data[1].replace("-",""), data[2], data[3]
+        self.dbg = False
+        self.dbg = True         # comment this line to reduce log
 
         self.set_browser()
+        self.set_profile()
         self.set_isbn_box()
         self.set_auteurs_box()
         self.set_titre_box()
@@ -172,13 +176,24 @@ class MainWindow(QMainWindow):
 
       # browser
     def set_browser(self):
-        print("in set_browser")
+        print(f"in set_browser, value of self.dbg : {self.dbg}\n")      # entry point for each iteration of the browser
         self.browser = QWebEngineView()
         self.browser.setUrl(QUrl("http://www.google.com"))
+    
+      # set profile to enable remembering cookies...
+    def set_profile(self):
+        if self.dbg: print("in set_profile")
+        profile = QWebEngineProfile("savecookies", self.browser)
+        browser_storage_folder = os.path.join(cache_dir(), 'getandsetidfromweb')
+        print(f"browser_storagefolder : {browser_storage_folder}")
+        profile.setHttpCacheType(QWebEngineProfile.HttpCacheType.MemoryHttpCache)
+        profile.setPersistentStoragePath(browser_storage_folder)
+        self.webpage = QWebEnginePage(profile, self.browser)
+        self.browser.setPage(self.webpage)
 
       # info boxes
     def set_isbn_box(self):        # info boxes isbn
-        print("in set_isbn_box")
+        if self.dbg: print("in set_isbn_box")
         self.isbn_btn = QPushButton(" ISBN ", self)
         self.isbn_btn.setToolTip('Action : "Mots-clefs à rechercher" = ISBN, est copié dans le presse-papiers.')
                                    # Action on home page: "Mots-clefs à rechercher" = ISBN, set checkbox "Livre".
@@ -193,7 +208,7 @@ class MainWindow(QMainWindow):
         self.isbn_lt.addWidget(self.isbn_dsp)
 
     def set_auteurs_box(self):                  # info boxes auteurs
-        print("in set_auteurs_box")
+        if self.dbg: print("in set_auteurs_box")
         self.auteurs_btn = QPushButton("Auteur(s)", self)
         self.auteurs_btn.setToolTip('Action : "Mots-clefs à rechercher" = Auteur(s), est copié dans le presse-papiers.')
                                       # Action on home page: "Mots-clefs à rechercher" = Auteur(s), set checkbox "Auteurs".
@@ -207,7 +222,7 @@ class MainWindow(QMainWindow):
         self.auteurs_lt.addWidget(self.auteurs_dsp)
 
     def set_titre_box(self):                    # info boxes titre
-        print("in set_titre_box")
+        if self.dbg: print("in set_titre_box")
         self.titre_btn = QPushButton("Titre", self)
         self.titre_btn.setToolTip('Action : "Mots-clefs à rechercher" = Titre, est copié dans le presse-papiers.')
                                     # Action on home page: "Mots-clefs à rechercher" = Titre, set checkbox "Livres".
@@ -222,7 +237,7 @@ class MainWindow(QMainWindow):
 
   # search bar hidden when inactive ready to find something (I hope :-) )
     def set_search_bar(self):
-        print("in set_search_bar")
+        if self.dbg: print("in set_search_bar")
         self.search_pnl = Search_Panel()
         self.search_toolbar = QToolBar()
         self.search_toolbar.addWidget(self.search_pnl)
@@ -232,7 +247,7 @@ class MainWindow(QMainWindow):
         self.search_pnl.closed.connect(self.search_toolbar.hide)
 
     def join_all_boxes(self):                   # put all that together, center, size and make it central widget
-        print("in join_all_boxes")
+        if self.dbg: print("in join_all_boxes")
         layout = QVBoxLayout()
         layout.addWidget(self.browser)
         layout.addLayout(self.isbn_lt)
@@ -247,7 +262,7 @@ class MainWindow(QMainWindow):
 
       # set navigation toolbar
     def set_nav_and_status_bar(self) :
-        print("in set_nav_and_status_bar")
+        if self.dbg: print("in set_nav_and_status_bar")
         nav_tb = QToolBar("Navigation")
         nav_tb.setIconSize(QSize(24,24))
         self.addToolBar(nav_tb)
@@ -320,7 +335,7 @@ class MainWindow(QMainWindow):
   # search action
     @pyqtSlot(str, QWebEnginePage.FindFlag)
     def on_searched(self, text, flag):
-        print("in on_searched text : {}, flag : {}".format(text, flag))
+        print(f"in on_searched text : {text}, flag : {flag}")
         def callback(found):
             if text and not found:
                 self.msg_label.setText('Désolé, {} pas trouvé...'.format(text))     # Sorry "text" not found
@@ -328,7 +343,7 @@ class MainWindow(QMainWindow):
                 self.msg_label.setText('')
         self.browser.findText(text, flag, callback)
 
-  # info boxes actions
+  # info boxes actions, noosfere is a special case...
     @pyqtSlot()
     def set_noosearch_page(self, iam):
         print(f"in set_noosearch_page iam : {iam}")
@@ -345,8 +360,7 @@ class MainWindow(QMainWindow):
                 self.browser.page().runJavaScript("document.getElementsByName('livres')[0].checked = true")
                 self.browser.page().runJavaScript("document.getElementsByName('auteurs')[0].checked = false")
         else:
-            cb = Application.clipboard()
-            print(type(cb))
+            cb = Application.instance().clipboard()
             cb.clear(mode=cb.Mode.Clipboard)
             if iam == "isbn": cb.setText(self.isbn.replace("-","") + " ", mode=cb.Mode.Clipboard)
             elif iam == "auteurs": cb.setText(self.auteurs + " ", mode=cb.Mode.Clipboard)
@@ -354,30 +368,32 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def wake_search_panel(self):
-        print("in wake_search_panel")
+        if self.dbg: print("in wake_search_panel")
         self.search_toolbar.show()
 
   # Navigation actions
     def initial_url(self, url="http://www.google.com"):
-        print("in initial_url url : {}".format(url))
+        if self.dbg: print(f"in initial_url url : {url}")
         self.browser.setUrl(QUrl(url))
 
     def navigate_home(self):
-        print("in navigate_home")
+        if self.dbg: print("in navigate_home")
         self.browser.setUrl(QUrl("https://www.google.com"))      # home for the 'get and set id from web' browser 
 
     def navigate_to_url(self):                    # Does not receive the Url, activated when url bar is manually changed
-        print("in navigate_to_url")
-        q = QUrl(self.urlbox.text())
-        self.browser.setUrl(q)
+        if self.dbg: print("in navigate_to_url")
+        url = QUrl(self.urlbox.text())
+        if not url.startswith("http"):
+            url = "https://" + url
+        self.browser.setUrl(url)
 
     def update_urlbar(self, q):
-        print("in update_urlbar")
+        if self.dbg: print("in update_urlbar")
         self.urlbox.setText(q.toString())
         self.urlbox.setCursorPosition(0)
 
     def loading_title(self):
-        print("in loading_title")
+        if self.dbg: print("in loading_title")
       # anytime we change page we come here... let's clear and hide the search panel
         self.search_pnl.closed.emit()           # by sending a close search panel signal
       # before doubling indication that we load a page in the title
@@ -385,27 +401,27 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(title)
 
     def update_title(self):
-        print("in update_title")
+        if self.dbg: print("in update_title")
         title = self.browser.page().title()
         self.setWindowTitle(title)
 
     def report_returned_url(self, returned_url):
-        print("in report_returned_url returned_url : {}".format(returned_url))
+        print(f"in report_returned_url returned_url : {returned_url}")
         with open(os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_report_url"),"w",encoding="utf_8") as report_tpf:
             report_tpf.write(returned_url)
 
     def set_progress_bar(self):
-        print("in set_progress_bar")
+        if self.dbg: print("in set_progress_bar")
         self.page_load_pb.show()
         self.page_load_label.show()
 
     def update_progress_bar(self, progress):
-        print("in update_progress_bar progress : {}".format(progress))
+        if self.dbg: print("in update_progress_bar progress : {}".format(progress))
         self.page_load_pb.setValue(progress)
         self.page_load_label.setText("En téléchargement de l'url... ({}/100)".format(str(progress)))
 
     def reset_progress_bar(self):
-        print("in reset_progress_bar")
+        if self.dbg: print("in reset_progress_bar")
         def wait_a_minut():
             self.page_load_pb.hide()
             self.page_load_label.hide()
@@ -413,52 +429,45 @@ class MainWindow(QMainWindow):
 
     def select_and_exit(self):                    # sent response over report_returned_url file in temp dir
       # create a temp file with name ( now starting with gt_st_id_frm_wb_id)
-        print("in select_and_exit")
+        if self.dbg: print("in select_and_exit")
         self.report_returned_url(self.urlbox.text())
         selected_url = self.urlbox.text()            # get url displayed in urlbox
         if selected_url:
-        # if "/livres/" in selected_url:
             print('selected_url : {}'.format(selected_url))
-        #     selected_url = selected_url.split("/livres/")[1]
-        #     print("selected_url : {}".format(selected_url))
-        #     self.report_returned_url(selected_url)
             self.report_returned_url(selected_url)
-        # else:
-        #     print('No book selected, no change will take place: unset')
-        #     self.report_returned_url("unset")
         Application.instance().exit()               # exit application...
 
     def abort_book(self):                           # we want to NOT change the book and proceed to the next one
-        print("in abort_book")
+        if self.dbg: print("in abort_book")
         reply = QMessageBox.question(self, 'Certain', "Oublier ce livre et passer au suivant", QMessageBox.No | QMessageBox.Yes, QMessageBox.Yes)
         if reply == QMessageBox.Yes:
-            print("WebEngineView was aborted: aborted")
+            print("WebEngineView was aborted for this book: aborted")
             self.report_returned_url("aborted")
             Application.instance().exit()           # exit application...
 
 
     def closeEvent(self, event):                    # abort hit window exit "X" button we stop processing this and all following books
-        print("in closeEvent event : {}".format(event))
+        print(f"in closeEvent event : {event}")
         reply = QMessageBox.question(self, 'Vraiment', "Quitter et ne plus rien changer", QMessageBox.No | QMessageBox.Yes, QMessageBox.Yes)
         if reply == QMessageBox.Yes:
             event.accept()
             print("WebEngineView was closed: killed")
             self.report_returned_url("killed")
+            self.webpage.deleteLater()
             super().closeEvent(event)
         else:
             event.ignore()
 
     def chk_for_shutdown(self):                     # presence of such file means that calibre shutdown
         if glob.glob(os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_terminate-cal-qweb*")):
-            print("WebEngineView was closed: killed")
+            print("Calibre shutdown WebEngineView was closed: killed")
             self.report_returned_url("killed")       # report main calibre shutdown
             Application.instance().exit()           # exit application...
 
-
-
 def main(data):
 
-    # create a temp file... while it exists launcher program will wait... this file will disappear with the process
+    # create a temp file... while it exists launcher program will wait... 
+    # this file will disappear with the process
     sync_tpf=tempfile.NamedTemporaryFile(prefix="GetAndSetIdFromWeb_sync-cal-qweb")
 
     # retrieve component from data
@@ -481,6 +490,7 @@ if __name__ == '__main__':
     replace all get_icons(' with QIcon('./ (do NOT replace me :-) )
     AND to get errors on screen, comment out class StreamToLogger(object)
     along with the 10 first lines in __init__ of class MainWindow(QMainWindow
+    To debug web_main, do set self.dbg = True in class MainWindow
     '''
     url = "https://www.google.com"    # jump directly to google
     isbn = "2-277-12362-5"
@@ -488,9 +498,6 @@ if __name__ == '__main__':
     titre = "Le Monde des Ã"
     data = [url, isbn, auteurs, titre]
     main(data)
-
-    def get_icons(text):
-        return QIcon(text)
 
     with open (os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_report_url"), "r",encoding='utf_8') as tf:
         returned_url = tf.read()
@@ -500,8 +507,8 @@ if __name__ == '__main__':
     if returned_url:
         selected_url = returned_url
         print("selected_url : {}".format(selected_url))
-    elif "unset" in returned_url:
-        print('unset, no change will take place...')
+    elif "aborted" in returned_url:
+        print('aborted, no change will take place...')
     elif "killed" in returned_url:
         print('killed, no change will take place...')
     else:

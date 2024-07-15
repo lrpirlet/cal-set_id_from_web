@@ -54,6 +54,8 @@ from json import dumps
 from functools import partial
 import tempfile, os, sys, logging
 
+from pathlib import Path
+
 
 # class StreamToLogger(object):
     # """
@@ -154,6 +156,7 @@ class MainWindow(QMainWindow):
         self.isbn, self.auteurs, self.titre = data[1].replace("-",""), data[2], data[3]
 
         self.set_browser()
+        self.set_profile()
         self.set_isbn_box()
         self.set_auteurs_box()
         self.set_titre_box()
@@ -182,6 +185,21 @@ class MainWindow(QMainWindow):
         print("in set_browser")
         self.browser = QWebEngineView()
         self.browser.setUrl(QUrl("http://www.google.com"))
+    
+    def set_profile(self):
+        profile = QWebEngineProfile("savecookies", self.browser)
+        print(f"unset... {QWebEngineProfile.persistentCookiesPolicy(profile)}, of the record? : {profile.isOffTheRecord()}") 
+
+        profile.setPersistentCookiesPolicy(QWebEngineProfile.PersistentCookiesPolicy.ForcePersistentCookies)
+        print(f"set... {QWebEngineProfile.persistentCookiesPolicy(profile)}, of the record? : {profile.isOffTheRecord()}")
+
+        browser_storage_folder = Path.home().as_posix() + '/.test_cookies'
+        print(f"browser_storagefolder : {browser_storage_folder}")
+        
+        profile.setPersistentStoragePath(browser_storage_folder)
+
+        self.webpage = QWebEnginePage(profile, self.browser)
+        self.browser.setPage(self.webpage)
 
       # info boxes
     def set_isbn_box(self):        # info boxes isbn
@@ -444,6 +462,7 @@ class MainWindow(QMainWindow):
             event.accept()
             print("WebEngineView was closed: killed")
             self.report_returned_id("killed")
+            self.webpage.deleteLater()
             super().closeEvent(event)
         else:
             event.ignore()
