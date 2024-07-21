@@ -194,14 +194,12 @@ class InterfacePlugin(InterfaceAction):
 
         from calibre.customize.ui import all_metadata_plugins
 
-        bbl_id = ""
         for plugin in all_metadata_plugins():
             if DEBUG: prints(f"plugin is {plugin}")
             try:
-                if DEBUG: prints(f"identifier is {plugin.id_from_url(url)}")
                 identifier = plugin.id_from_url(url)
                 if identifier:
-                    prints(f"identifier : {identifier}")
+                    if DEBUG: prints(f"identifier : {identifier}")
                     return identifier
             except Exception:
                 pass
@@ -296,7 +294,7 @@ class InterfacePlugin(InterfaceAction):
         if not self.do_shutdown:
           # Launch a separate process to view the URL in WebEngine
             self.gui.job_manager.launch_gui_app('webengine-dialog', kwargs={'module':'calibre_plugins.get_and_set_id_from_web.web_main', 'data':data})
-            if DEBUG: prints("webengine-dialog process submitted")          # WARNING: "webengine-dialog" is a defined function in calibre\src\calibre\utils\ipc\worker.py ...DO NOT CHANGE...
+            if DEBUG: prints("webengine-dialog process submitted")          # WARNING: "webengine-dialog" is defined in calibre\src\calibre\utils\ipc\worker.py ...DO NOT CHANGE...
       # wait for web_main.py to settle and create a temp file to synchronize QWebEngineView with calibre...
       # watch out, self.do_shutdown is set by a signal, any time...
         while not (self.do_shutdown or glob.glob(os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_sync-cal-qweb*"))):
@@ -313,8 +311,11 @@ class InterfacePlugin(InterfaceAction):
         if not self.do_shutdown:
           # sync file is gone, meaning QWebEngineView process is closed so, we can collect the result, bypass if shutdown_started
             with open(os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_report_url"), "r", encoding="utf_8") as tpf:
-                returned_url = tpf.read()
-            if DEBUG: prints("returned_url", returned_url)
+                # returned_url = tpf.read()
+                returned_url = [line.rstrip('\n') for line in tpf]
+            if DEBUG: # prints("returned_url", returned_url)
+                for i in range(len(returned_url)):
+                    prints("returned_url", returned_url)
 
             if returned_url:
                 if "aborted" in returned_url:
@@ -324,15 +325,24 @@ class InterfacePlugin(InterfaceAction):
                     if DEBUG: prints('killed, no change will take place...')
                     return (False, False)                               # gt_st_id_frm_wb_id NOT received, NO more book
                 else:
-                    try:
-                        id_name, gt_st_id_frm_wb_id = self.id_frm_url(returned_url)
-                    except:
-                        if DEBUG: prints('no id could be extracted from url, no change will take place...')
-                        return (False, True)                                # gt_st_id_frm_wb_id NOT received, more book
+                    returned_id=[]  #id_name, gt_st_id_frm_wb_id
+                    for i in range(len(returned_url)):
+                        returned_id.append(self.id_frm_url(returned_url[i]))
+                        prints(f"returned_id type : {type(returned_id)}, value : {returned_id}")
+                    if not returned_id:
+                        prints('no id could be extracted from url, no change will take place...')
+                        return (False, True)                             # gt_st_id_frm_wb_id NOT received, more book
+                            
+                        # try:
+                        #     # id_name, gt_st_id_frm_wb_id = self.id_frm_url(returned_url)
+                        # except:
+                            # if DEBUG: prints('no id could be extracted from url, no change will take place...')
+                            # return (False, True)                                # gt_st_id_frm_wb_id NOT received, more book
             
         if self.do_shutdown:
             return(False,False)                             # shutdown_started, do not try to change db
-        elif gt_st_id_frm_wb_id:
+        else:
+        # elif gt_st_id_frm_wb_id:
           # set the gt_st_id_frm_wb_id, reset most metadata...
             for key in mi.custom_field_keys():
                 display_name, val, oldval, fm = mi.format_field_extended(key)
@@ -342,7 +352,9 @@ class InterfacePlugin(InterfaceAction):
             mi.series=""
             mi.language=""
             mi.pubdate=UNDEFINED_DATE
-            mi.set_identifier(id_name, gt_st_id_frm_wb_id)
+            for i in range(len(returned_id)):
+                id_name, gt_st_id_frm_wb_id = returned_id[i]
+                mi.set_identifier(id_name, gt_st_id_frm_wb_id)
             # mi.set_identifier('isbn', "")     # no need to remove isbn: will be overwritten if found by Metadata plugin
             if cstm_coll_srl_fm:
                 cstm_coll_srl_fm["#value#"] = ""

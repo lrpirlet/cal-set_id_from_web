@@ -21,7 +21,7 @@ from PyQt6.QtGui import (QAction, QShortcut, QKeySequence, QIcon)
 # from qt.webengine import QWebEngineView, QWebEnginePage
 
 from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
+from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile, QWebEngineSettings
 
 # from PyQt5.QtCore import pyqtSlot, QUrl, QSize, Qt, pyqtSignal, QTimer
 # from PyQt5.QtWidgets import (QMainWindow, QToolBar, QAction, QLineEdit, QStatusBar, QProgressBar,
@@ -200,6 +200,14 @@ class MainWindow(QMainWindow):
 
         self.webpage = QWebEnginePage(profile, self.browser)
         self.browser.setPage(self.webpage)
+            
+    # def set_it_secure(self):
+        # settings = self.browser.settings()
+        # settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, False)
+        # settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows, False)
+        # settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanAccessClipboard, False)
+        # settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, False)
+        # settings.setUnknownUrlSchemePolicy(QWebEngineSettings.UnknownUrlSchemePolicy.DisallowUnknownUrlSchemes)
 
       # info boxes
     def set_isbn_box(self):        # info boxes isbn
@@ -369,7 +377,11 @@ class MainWindow(QMainWindow):
                 self.browser.page().runJavaScript("document.getElementsByName('livres')[0].checked = true")
                 self.browser.page().runJavaScript("document.getElementsByName('auteurs')[0].checked = false")
         else:
-            pass
+            cb = QApplication.instance().clipboard()
+            cb.clear(mode=cb.Mode.Clipboard)
+            if iam == "isbn": cb.setText(self.isbn.replace("-","") + " ", mode=cb.Mode.Clipboard)
+            elif iam == "auteurs": cb.setText(self.auteurs + " ", mode=cb.Mode.Clipboard)
+            else: cb.setText(self.titre + " ", mode=cb.Mode.Clipboard)
 
     @pyqtSlot()
     def wake_search_panel(self):
@@ -478,7 +490,7 @@ def main(data):
     url, isbn, auteurs, titre = data[0], data[1], data[2], data[3],
     # Start QWebEngineView and associated widgets
     # app = Application([])  # lrp
-    app = QApplication([data])
+    app = QApplication(sys.argv)
     window = MainWindow(data)
     window.initial_url(url)     # supposed to be noosfere advanced search page, fixed by launcher program
     app.exec()

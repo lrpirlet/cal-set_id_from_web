@@ -99,7 +99,7 @@ class Search_Panel(QWidget):
 
     @pyqtSlot()
     def on_preview_find(self):
-        self.update_searching(QWebEnginePage.FindBackward)
+        self.update_searching(QWebEnginePage.FindFlag.FindBackward)
 
     @pyqtSlot()
     def update_searching(self, direction=QWebEnginePage.FindFlag(0)):
@@ -140,8 +140,10 @@ class MainWindow(QMainWindow):
 
       # data = [url, isbn, auteurs, titre]
         self.isbn, self.auteurs, self.titre = data[1].replace("-",""), data[2], data[3]
-        self.dbg = False
+        # self.dbg = False
         self.dbg = True         # comment this line to reduce log
+      # initialize self.selected_url
+        self.selected_url = []
 
         self.set_browser()
         self.set_profile()
@@ -180,7 +182,7 @@ class MainWindow(QMainWindow):
         self.browser = QWebEngineView()
         self.browser.setUrl(QUrl("http://www.google.com"))
     
-      # set profile to enable remembering cookies...
+      # set profile to enable remembering cookies... 
     def set_profile(self):
         if self.dbg: print("in set_profile")
         profile = QWebEngineProfile("savecookies", self.browser)
@@ -190,6 +192,10 @@ class MainWindow(QMainWindow):
         profile.setPersistentStoragePath(browser_storage_folder)
         self.webpage = QWebEnginePage(profile, self.browser)
         self.browser.setPage(self.webpage)
+        
+    # def set_it_secure(self):    # disable javascript to reduce malware surface grip
+    # Not a good idea really, to suppress Javascript capabilities remove too much and will
+    # make this browser suspect... In fact default seems most appropiate.
 
       # info boxes
     def set_isbn_box(self):        # info boxes isbn
@@ -314,8 +320,16 @@ class MainWindow(QMainWindow):
 
         nav_tb.addSeparator()
 
+        choice_btn = QAction(get_icons('blue_icon/choice.png'), "Select and store", self)
+        choice_btn.setToolTip("On sélectionne cet URL pour extraction de l'id... même livre, id suivant")
+                             # select this URL for extraction of the id, continue
+        choice_btn.triggered.connect(self.select_an_id)
+        nav_tb.addAction(choice_btn)
+
+        nav_tb.addSeparator()
+
         exit_btn = QAction(get_icons('blue_icon/exit.png'), "Select and exit", self)
-        exit_btn.setToolTip("On sélectionne cet URL pour extraction de l'id... au suivant")
+        exit_btn.setToolTip("On sélectionne cet URL pour extraction de l'id... livre suivant")
                              # select this URL for extraction of the id, continue
         exit_btn.triggered.connect(self.select_and_exit)
         nav_tb.addAction(exit_btn)
@@ -343,7 +357,7 @@ class MainWindow(QMainWindow):
                 self.msg_label.setText('')
         self.browser.findText(text, flag, callback)
 
-  # info boxes actions, noosfere is a special case...
+  # info boxes actions, noosfere is a special case... cause noosfere is the best in my opinion.
     @pyqtSlot()
     def set_noosearch_page(self, iam):
         print(f"in set_noosearch_page iam : {iam}")
@@ -405,11 +419,6 @@ class MainWindow(QMainWindow):
         title = self.browser.page().title()
         self.setWindowTitle(title)
 
-    def report_returned_url(self, returned_url):
-        print(f"in report_returned_url returned_url : {returned_url}")
-        with open(os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_report_url"),"w",encoding="utf_8") as report_tpf:
-            report_tpf.write(returned_url)
-
     def set_progress_bar(self):
         if self.dbg: print("in set_progress_bar")
         self.page_load_pb.show()
@@ -427,14 +436,27 @@ class MainWindow(QMainWindow):
             self.page_load_label.hide()
         QTimer.singleShot(1000, wait_a_minut)
 
-    def select_and_exit(self):                    # sent response over report_returned_url file in temp dir
-      # create a temp file with name ( now starting with gt_st_id_frm_wb_id)
+    def report_returned_url(self, returned_url):                # sent response over report_returned_url file in temp dir
+        if self.dbg: print(f"in report_returned_url returned_url : {returned_url}")
+        with open(os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_report_url"),"w",encoding="utf_8") as report_tpf:
+            for i in range(len(returned_url)):
+                report_tpf.writelines(returned_url[i] + "\n")
+
+    def select_an_id(self):                    
+      # build a list of URL that will be converted to ID 
+        if self.dbg: print("in select_an_id")
+        self.selected_url.append(self.urlbox.text())            # add url displayed in urlbox
+        if self.selected_url:
+            print(f'self.selected_url : {self.selected_url}')
+
+    def select_and_exit(self):                  
+      # terminate the list with the present URL and exit
         if self.dbg: print("in select_and_exit")
-        self.report_returned_url(self.urlbox.text())
-        selected_url = self.urlbox.text()            # get url displayed in urlbox
-        if selected_url:
-            print('selected_url : {}'.format(selected_url))
-            self.report_returned_url(selected_url)
+        self.selected_url.append(self.urlbox.text())            # get url displayed in urlbox
+        if self.selected_url:
+            for i in range(len(self.selected_url)):
+                print(f'self.selected_url[{i}] : {self.selected_url[i]}')
+            self.report_returned_url(self.selected_url)
         Application.instance().exit()               # exit application...
 
     def abort_book(self):                           # we want to NOT change the book and proceed to the next one
@@ -442,7 +464,7 @@ class MainWindow(QMainWindow):
         reply = QMessageBox.question(self, 'Certain', "Oublier ce livre et passer au suivant", QMessageBox.No | QMessageBox.Yes, QMessageBox.Yes)
         if reply == QMessageBox.Yes:
             print("WebEngineView was aborted for this book: aborted")
-            self.report_returned_url("aborted")
+            self.report_returned_url("aborted by user")
             Application.instance().exit()           # exit application...
 
 
@@ -452,7 +474,7 @@ class MainWindow(QMainWindow):
         if reply == QMessageBox.Yes:
             event.accept()
             print("WebEngineView was closed: killed")
-            self.report_returned_url("killed")
+            self.report_returned_url("killed by user")
             self.webpage.deleteLater()
             super().closeEvent(event)
         else:
@@ -461,7 +483,7 @@ class MainWindow(QMainWindow):
     def chk_for_shutdown(self):                     # presence of such file means that calibre shutdown
         if glob.glob(os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_terminate-cal-qweb*")):
             print("Calibre shutdown WebEngineView was closed: killed")
-            self.report_returned_url("killed")       # report main calibre shutdown
+            self.report_returned_url("killed on shutdown")       # report main calibre shutdown
             Application.instance().exit()           # exit application...
 
 def main(data):
@@ -506,7 +528,8 @@ if __name__ == '__main__':
     # if returned_url.replace("vl$","").replace("-","").isnumeric():
     if returned_url:
         selected_url = returned_url
-        print("selected_url : {}".format(selected_url))
+        for i in range(len(selected_url)):
+            print(f"selected_url[{i}] : {selected_url[i]}")
     elif "aborted" in returned_url:
         print('aborted, no change will take place...')
     elif "killed" in returned_url:
