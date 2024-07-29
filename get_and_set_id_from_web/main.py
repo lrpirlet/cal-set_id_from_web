@@ -278,17 +278,12 @@ class InterfacePlugin(InterfaceAction):
         if DEBUG and mi.authors: prints("authors     *    : ", mi.authors)
         if DEBUG and "isbn" in mi.get_identifiers(): prints("isbn             : ", mi.get_identifiers()["isbn"])
 
-      # set url, isbn, auteurs and titre
+      # set url, isbn, auteurs, titre and debug level
         url = "https://www.google.com"     # jump directly to google
         if "isbn" in mi.get_identifiers(): isbn = mi.get_identifiers()["isbn"]
         auteurs = " & ".join(mi.authors)
         titre = mi.title
-        data = [url, isbn, auteurs, titre]
-        if DEBUG:
-            prints(" url is a string :         ", isinstance(url, str))
-            prints(" isbn is a string :        ", isinstance(isbn, str))
-            prints(" auteurs is a string :     ", isinstance(auteurs, str))
-            prints(" titre is a string :       ", isinstance(titre, str))
+        data = [url, isbn, auteurs, titre, DEBUG]
 
       # unless shutdown_started signal asserted
         if not self.do_shutdown:
@@ -327,23 +322,13 @@ class InterfacePlugin(InterfaceAction):
                 else:
                     returned_id=[]  #id_name, gt_st_id_frm_wb_id
                     for i in range(len(returned_url)):
-                        returned_id.append(self.id_frm_url(returned_url[i]))
-                        prints(f"returned_id type : {type(returned_id)}, value : {returned_id}")
+                        rtnid=self.id_frm_url(returned_url[i])
+                        if rtnid : 
+                            returned_id.append(rtnid)
                     if not returned_id:
                         prints('no id could be extracted from url, no change will take place...')
                         return (False, True)                             # gt_st_id_frm_wb_id NOT received, more book
-                            
-                        # try:
-                        #     # id_name, gt_st_id_frm_wb_id = self.id_frm_url(returned_url)
-                        # except:
-                            # if DEBUG: prints('no id could be extracted from url, no change will take place...')
-                            # return (False, True)                                # gt_st_id_frm_wb_id NOT received, more book
             
-        if self.do_shutdown:
-            return(False,False)                             # shutdown_started, do not try to change db
-        else:
-        # elif gt_st_id_frm_wb_id:
-          # set the gt_st_id_frm_wb_id, reset most metadata...
             for key in mi.custom_field_keys():
                 display_name, val, oldval, fm = mi.format_field_extended(key)
                 if self.coll_srl_name == key : cstm_coll_srl_fm=fm
@@ -355,14 +340,16 @@ class InterfacePlugin(InterfaceAction):
             for i in range(len(returned_id)):
                 id_name, gt_st_id_frm_wb_id = returned_id[i]
                 mi.set_identifier(id_name, gt_st_id_frm_wb_id)
-            # mi.set_identifier('isbn', "")     # no need to remove isbn: will be overwritten if found by Metadata plugin
             if cstm_coll_srl_fm:
                 cstm_coll_srl_fm["#value#"] = ""
                 mi.set_user_metadata(self.coll_srl_name, cstm_coll_srl_fm)
             if cstm_collection_fm:
                 cstm_collection_fm["#value#"] = ""
                 mi.set_user_metadata(self.collection_name, cstm_collection_fm)
-          # commit the change, force reset of the above fields, leave the others alone
+                    
+        if self.do_shutdown:
+            return(False,False)                             # shutdown_started, do not try to change db
+        else:      # commit the change, force reset of the above fields, leave the others alone
             db.set_metadata(book_id, mi, force_changes=True)
             return (True, True)                                 # gt_st_id_frm_wb_id received, more book
 

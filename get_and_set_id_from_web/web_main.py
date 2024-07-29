@@ -114,7 +114,7 @@ class MainWindow(QMainWindow):
     """
     this process, running in the calibre environment, is detached from calibre program
     It does receive data from set_id_from_web, processes it, then communicates back the 
-    result and dies. Data received is title, author and ISDN; data reurned is one or more IDs
+    result and dies. Data received is title, authors, ISDN and DEBUG; data reurned is one or more IDs
     related to the book and/or one or more fake unique title ?using actual date/time?, 
     associated with an id so that a new book may be created. (example: missing book in a series) 
     In fact this is a very basic WEB browser to report the selected_url of the choosen book.
@@ -138,10 +138,14 @@ class MainWindow(QMainWindow):
         sl = StreamToLogger(stderr_logger, logging.ERROR)
         sys.stderr = sl
 
-      # data = [url, isbn, auteurs, titre]
-        self.isbn, self.auteurs, self.titre = data[1].replace("-",""), data[2], data[3]
-        # self.dbg = False
-        self.dbg = True         # comment this line to reduce log
+      # data = [url, isbn, auteurs, titre, DEBUG]
+        self.isbn, self.auteurs, self.titre, self.dbg = data[1].replace("-",""), data[2], data[3], data[4]
+        print("in __init__")
+        print(f"isbn    : {self.isbn}")
+        print(f"auteurs : {self.auteurs}")
+        print(f"titre   : {self.titre}")
+        print(f"dbg     : {self.dbg}")
+
       # initialize self.selected_url
         self.selected_url = []
 
@@ -194,8 +198,8 @@ class MainWindow(QMainWindow):
         self.browser.setPage(self.webpage)
         
     # def set_it_secure(self):    # disable javascript to reduce malware surface grip
-    # Not a good idea really, to suppress Javascript capabilities remove too much and will
-    # make this browser suspect... In fact default seems most appropiate.
+    # Not a good idea really, to suppress Javascript capabilities remove too much...
+    # In fact default seems most appropiate.
 
       # info boxes
     def set_isbn_box(self):        # info boxes isbn
@@ -493,8 +497,8 @@ def main(data):
     sync_tpf=tempfile.NamedTemporaryFile(prefix="GetAndSetIdFromWeb_sync-cal-qweb")
 
     # retrieve component from data
-    #        data = [url, isbn, auteurs, titre]
-    url, isbn, auteurs, titre = data[0], data[1], data[2], data[3],
+    #        data = [url, isbn, auteurs, titre, DEBUG]
+    url = data[0]
     # Start QWebEngineView and associated widgets
     app = Application([])
     window = MainWindow(data)
@@ -504,6 +508,7 @@ def main(data):
     # signal launcher program that we are finished
     sync_tpf.close           # close temp file
 
+########################################################################################
 
 if __name__ == '__main__':
     '''
@@ -518,7 +523,7 @@ if __name__ == '__main__':
     isbn = "2-277-12362-5"
     auteurs = "Alfred Elton VAN VOGT"                       # forget not that auteurs may be a list of auteurs
     titre = "Le Monde des Ã"
-    data = [url, isbn, auteurs, titre]
+    data = [url, isbn, auteurs, titre, True]
     main(data)
 
     with open (os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_report_url"), "r",encoding='utf_8') as tf:

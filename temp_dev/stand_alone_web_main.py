@@ -10,13 +10,13 @@ __copyright__ = '2022, Louis Richard Pirlet'
 #     QPushButton, QShortcut,
 #     QKeySequence, QIcon)
 
-from PyQt6.QtCore import (pyqtSlot, QUrl, QSize, Qt, pyqtSignal, QTimer)
+from PyQt6.QtCore import (pyqtSlot, QUrl, QSize, Qt, pyqtSignal, QTimer, QSettings, QEventLoop)
 
 from PyQt6.QtWidgets import(QMainWindow, QToolBar, QLineEdit,QStatusBar, QProgressBar, 
                             QMessageBox, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-                            QPushButton)
+                            QPushButton, QInputDialog)
 
-from PyQt6.QtGui import (QAction, QShortcut, QKeySequence, QIcon)
+from PyQt6.QtGui import (QAction, QShortcut, QKeySequence, QIcon, QFontMetrics)
 
 # from qt.webengine import QWebEngineView, QWebEnginePage
 
@@ -56,6 +56,7 @@ import tempfile, os, sys, logging
 
 from pathlib import Path
 
+PXLSIZE = 125   # I need this constant in several classes 
 
 # class StreamToLogger(object):
     # """
@@ -77,7 +78,7 @@ from pathlib import Path
 
 class Search_Panel(QWidget):
     searched = pyqtSignal(str, QWebEnginePage.FindFlag)
-    closed = pyqtSignal()
+    closesrch = pyqtSignal()
 
     def __init__(self,parent=None):
         super(Search_Panel,self).__init__(parent)
@@ -94,7 +95,7 @@ class Search_Panel(QWidget):
 
         done_btn = QPushButton("Terminé")
         done_btn.setToolTip("Ce bouton ferme la barre de recherche")
-        done_btn.clicked.connect(self.closed)
+        done_btn.clicked.connect(self.closesrch)
         if isinstance(done_btn, QPushButton): done_btn.clicked.connect(self.setFocus)
 
         self.srch_dsp = QLineEdit()
@@ -102,7 +103,7 @@ class Search_Panel(QWidget):
         self.setFocusProxy(self.srch_dsp)
         self.srch_dsp.textChanged.connect(self.update_searching)
         self.srch_dsp.returnPressed.connect(self.update_searching)
-        self.closed.connect(self.srch_dsp.clear)
+        self.closesrch.connect(self.srch_dsp.clear)
 
         self.srch_lt = QHBoxLayout(self)
         self.srch_lt.addWidget(self.srch_dsp)
@@ -112,7 +113,7 @@ class Search_Panel(QWidget):
 
         QShortcut(QKeySequence.StandardKey.FindNext, self, activated=next_btn.animateClick)
         QShortcut(QKeySequence.StandardKey.FindPrevious, self, activated=prev_btn.animateClick)
-        QShortcut(QKeySequence(Qt.Key.Key_Escape), self.srch_dsp, activated=self.closed)
+        QShortcut(QKeySequence(Qt.Key.Key_Escape), self.srch_dsp, activated=self.closesrch)
 
     @pyqtSlot()
     def on_preview_find(self):
@@ -126,6 +127,40 @@ class Search_Panel(QWidget):
     def showEvent(self, event):
         super(Search_Panel, self).showEvent(event)
         self.setFocus()
+
+class BookMarkToolBar(QToolBar):
+    bookmarkClicked = pyqtSignal(QUrl, str)
+
+    def __init__(self, parent=None):
+        super(BookMarkToolBar, self).__init__(parent)
+        self.actionTriggered.connect(self.onActionTriggered)
+        self.bookmark_list = []
+        self.PXLSIZE = PXLSIZE 
+
+    def setBoorkMarks(self, bookmarks):
+        for bookmark in bookmarks:
+            self.addBookMarkAction(bookmark["title"], bookmark["url"], initial=True)
+
+    def addBookMarkAction(self, title, url, initial=False):
+        bookmark = {"title": title, "url": url}
+        if not initial: 
+            print(f"self.bookmark_list : {self.bookmark_list}")
+
+            reply = QMessageBox.question(self, "Manage Bookmark", url, QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.Yes)
+            if reply == QMessageBox.StandardButton.No: 
+                return
+        fm = QFontMetrics(self.font())
+        if bookmark not in self.bookmark_list:
+            text = fm.elidedText(title, Qt.TextElideMode.ElideRight, self.PXLSIZE)
+            action = self.addAction(text)
+            action.setData(bookmark)
+            self.bookmark_list.append(bookmark)
+
+    @pyqtSlot(QAction)
+    def onActionTriggered(self, action):
+        bookmark = action.data()
+        bkmrk_url = QUrl(bookmark["url"])
+        self.bookmarkClicked.emit(bkmrk_url, bookmark["title"])
 
 class MainWindow(QMainWindow):
     """
@@ -179,13 +214,17 @@ class MainWindow(QMainWindow):
         self.isbn_btn.clicked.connect(partial(self.set_noosearch_page, "isbn"))
         self.auteurs_btn.clicked.connect(partial(self.set_noosearch_page, "auteurs"))
         self.titre_btn.clicked.connect(partial(self.set_noosearch_page, "titre"))
+        self.bookmarkToolbar.bookmarkClicked.connect(self.set_from_bookmark)
+
 
       # browser
     def set_browser(self):
+
         print("in set_browser")
         self.browser = QWebEngineView()
         self.browser.setUrl(QUrl("http://www.google.com"))
     
+      # profile, remeber cookies
     def set_profile(self):
         profile = QWebEngineProfile("savecookies", self.browser)
         print(f"unset... {QWebEngineProfile.persistentCookiesPolicy(profile)}, of the record? : {profile.isOffTheRecord()}") 
@@ -201,14 +240,6 @@ class MainWindow(QMainWindow):
         self.webpage = QWebEnginePage(profile, self.browser)
         self.browser.setPage(self.webpage)
             
-    # def set_it_secure(self):
-        # settings = self.browser.settings()
-        # settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, False)
-        # settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows, False)
-        # settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanAccessClipboard, False)
-        # settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, False)
-        # settings.setUnknownUrlSchemePolicy(QWebEngineSettings.UnknownUrlSchemePolicy.DisallowUnknownUrlSchemes)
-
       # info boxes
     def set_isbn_box(self):        # info boxes isbn
         print("in set_isbn_box")
@@ -262,7 +293,7 @@ class MainWindow(QMainWindow):
         self.addToolBar(Qt.ToolBarArea.BottomToolBarArea, self.search_toolbar)
         self.search_toolbar.hide()
         self.search_pnl.searched.connect(self.on_searched)
-        self.search_pnl.closed.connect(self.search_toolbar.hide)
+        self.search_pnl.closesrch.connect(self.search_toolbar.hide)
 
     def join_all_boxes(self):                   # put all that together, center, size and make it central widget
         print("in join_all_boxes")
@@ -283,6 +314,7 @@ class MainWindow(QMainWindow):
         print("in set_nav_and_status_bar")
         nav_tb = QToolBar("Navigation")
         nav_tb.setIconSize(QSize(24,24))
+        nav_tb.setMovable(False)
         self.addToolBar(nav_tb)
 
         back_btn = QAction(QIcon('./blue_icon/back.png'), "Back", self)
@@ -324,6 +356,13 @@ class MainWindow(QMainWindow):
                                 # You can even enter an address, outside of noosfere, but AT YOUR OWN RISK... noosfere is safe: (https://), the web on the other side...
         nav_tb.addWidget(self.urlbox)
 
+        favorite_btn = QAction(QIcon("./blue_icon/star.png"), "bookmark", self)
+        favorite_btn.setToolTip("add favorite, manage favorite")
+        favorite_btn.triggered.connect(self.addFavoriteClicked)
+        nav_tb.addAction(favorite_btn)
+
+        nav_tb.addSeparator()
+        
         abort_btn = QAction(QIcon('./blue_icon/abort.png'), "Abort", self)
         abort_btn.setToolTip("On arrête, on oublie, on ne change rien au livre... au suivant")
                               # Stop everything, forget everything and change nothing... proceed to next book
@@ -337,7 +376,12 @@ class MainWindow(QMainWindow):
                              # select this URL for extraction of nsfr_id, continue
         exit_btn.triggered.connect(self.select_and_exit)
         nav_tb.addAction(exit_btn)
-
+  # bookmark bar (need a def)
+        self.addToolBarBreak()
+        self.bookmarkToolbar = BookMarkToolBar("Bookmark")
+        self.bookmarkToolbar.setMovable(False)   
+        self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self.bookmarkToolbar)   
+        self.readSettings()                             # initial fill of home, and remembered URL of interest
   # set status bar
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
@@ -389,8 +433,12 @@ class MainWindow(QMainWindow):
         self.search_toolbar.show()
 
   # Navigation actions
-    def initial_url(self, url="http://www.google.com"):
-        print("in initial_url url : {}".format(url))
+    def set_from_bookmark(self, bkmrk_url = QUrl(), label = 'Blank'):
+        print(f"in set_from_bookmark bkmrk_url : {bkmrk_url}, label : {label}")
+        self.goto_this_url(bkmrk_url)
+        
+    def goto_this_url(self, url="http://www.google.com"):
+        print("in goto_this_url url : {}".format(url))
         self.browser.setUrl(QUrl(url))
 
     def navigate_home(self):
@@ -410,7 +458,7 @@ class MainWindow(QMainWindow):
     def loading_title(self):
         print("in loading_title")
       # anytime we change page we come here... let's clear and hide the search panel
-        self.search_pnl.closed.emit()           # by sending a close search panel signal
+        self.search_pnl.closesrch.emit()           # by sending a close search panel signal
       # before doubling indication that we load a page in the title
         title="En téléchargement de l'url"
         self.setWindowTitle(title)
@@ -443,6 +491,30 @@ class MainWindow(QMainWindow):
             self.page_load_label.hide()
         QTimer.singleShot(1000, wait_a_minut)
 
+  # Bookmark actions   
+    def addFavoriteClicked(self):
+        loop = QEventLoop()
+
+        def callback(resp):
+            setattr(self, "title", resp)
+            loop.quit()
+
+        self.browser.page().runJavaScript("(function() { return document.title;})();", callback)
+        chsn_url = self.urlbox.text()
+        loop.exec()
+        self.bookmarkToolbar.addBookMarkAction(getattr(self, "title"), chsn_url) 
+
+    def readSettings(self):
+        setting = QSettings(Path.home().as_posix() + "/.test_bookmark2/MyApp.ini", QSettings.Format.IniFormat) # avoid using registry
+        self.defaultUrl = setting.value("defaultUrl", 'http://www.google.com')
+        self.bookmarkToolbar.setBoorkMarks(setting.value("bookmarks", []))
+
+    def saveSettins(self):
+        settings = QSettings(Path.home().as_posix() + "/.test_bookmark2/MyApp.ini", QSettings.Format.IniFormat) # avoid using registry
+        settings.setValue("defaultUrl", self.defaultUrl)
+        settings.setValue("bookmarks", self.bookmarkToolbar.bookmark_list)
+
+  # exit actions
     def select_and_exit(self):                    # sent response over report_returned_id file in temp dir
       # create a temp file with name starting with nsfr_id
         print("in select_and_exit")
@@ -455,8 +527,7 @@ class MainWindow(QMainWindow):
         else:
             print('No book selected, no change will take place: unset')
             self.report_returned_id("unset")
-        # Application.instance().quit()     # lrp
-        QApplication.instance().quit()
+        self.lets_go()
 
     def abort_book(self):                         # we want to NOT change the book and proceed to the next one
         print("in abort_book")
@@ -464,8 +535,7 @@ class MainWindow(QMainWindow):
         if reply == QMessageBox.StandardButton.Yes:
             print("WebEngineView was aborted: aborted")
             self.report_returned_id("aborted")
-            # Application.instance().quit()     # lrp
-            QApplication.instance().quit()
+            self.lets_go()
 
     def closeEvent(self, event):                  # abort hit window exit "X" button we stop processing this and all following books
         print("in closeEvent event : {}".format(event))
@@ -479,6 +549,9 @@ class MainWindow(QMainWindow):
         else:
             event.ignore()
 
+    def lets_go(self):
+        self.saveSettins()
+        QApplication.instance().quit()   # Application.instance().quit()     # lrp
 
 def main(data):
 
@@ -492,7 +565,7 @@ def main(data):
     # app = Application([])  # lrp
     app = QApplication(sys.argv)
     window = MainWindow(data)
-    window.initial_url(url)     # supposed to be noosfere advanced search page, fixed by launcher program
+    window.goto_this_url(url)     # supposed to be noosfere advanced search page, fixed by launcher program
     app.exec()
 
     # signal launcher program that we are finished
