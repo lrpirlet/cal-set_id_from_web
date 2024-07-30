@@ -76,7 +76,55 @@ PXLSIZE = 125   # I need this constant in several classes
         # for handler in self.logger.handlers:
             # handler.flush()
 
+class BookMarkToolBar(QToolBar):
+    '''
+    Create a bookmark button in the toolbar. On press of this button, 
+    a dialog box will open giving the possibility to sort the bookmarks, to add
+    a bookmark or to remove the matching bookmark.
+    The Bookmark name can be edited from the page title.
+    On click on a bookmark item, the webengine will go to the corresponding url.
+    '''
+  # signal generated for a press on a bookmark item in the bookmark (vertical) bar
+    bookmarkClicked = pyqtSignal(QUrl, str)
+
+    def __init__(self, parent=None):
+        super(BookMarkToolBar, self).__init__(parent)
+        self.actionTriggered.connect(self.onActionTriggered)
+        self.bookmark_list = []
+        self.PXLSIZE = PXLSIZE 
+
+    def setBoorkMarks(self, bookmarks):
+        for bookmark in bookmarks:
+            print(f"bookmark : {bookmark}")
+            self.addBookMarkAction(bookmark["title"], bookmark["url"], initial=True)
+
+    def addBookMarkAction(self, title, url, initial=False):
+        if not initial: 
+            print(f"self.bookmark_list : {self.bookmark_list}")
+
+            reply = QMessageBox.question(self, "Manage Bookmark", url, QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.Yes)
+            if reply == QMessageBox.StandardButton.No: 
+                return
+        bookmark = {"title": title, "url": url}
+        fm = QFontMetrics(self.font())
+        if bookmark not in self.bookmark_list:
+            text = fm.elidedText(title, Qt.TextElideMode.ElideRight, self.PXLSIZE)
+            action = self.addAction(text)
+            action.setData(bookmark)
+            self.bookmark_list.append(bookmark)
+
+    @pyqtSlot(QAction)
+    def onActionTriggered(self, action):
+        bookmark = action.data()
+        bkmrk_url = QUrl(bookmark["url"])
+        self.bookmarkClicked.emit(bkmrk_url, bookmark["title"])
 class Search_Panel(QWidget):
+    '''
+    A dynamic search panel. Shows up on signal "searched" when search is activated (via button or <ctrl f>).
+    Disapear on signal "closesrch" as soon as not relevant anymore (change url, button done, esc key).
+    No automatic information is passed in search line, manual cut and paste may be used to populate.
+    '''
+  # signal generated for a press on a bookmark item in the bookmark (vertical) bar
     searched = pyqtSignal(str, QWebEnginePage.FindFlag)
     closesrch = pyqtSignal()
 
@@ -127,41 +175,6 @@ class Search_Panel(QWidget):
     def showEvent(self, event):
         super(Search_Panel, self).showEvent(event)
         self.setFocus()
-
-class BookMarkToolBar(QToolBar):
-    bookmarkClicked = pyqtSignal(QUrl, str)
-
-    def __init__(self, parent=None):
-        super(BookMarkToolBar, self).__init__(parent)
-        self.actionTriggered.connect(self.onActionTriggered)
-        self.bookmark_list = []
-        self.PXLSIZE = PXLSIZE 
-
-    def setBoorkMarks(self, bookmarks):
-        for bookmark in bookmarks:
-            self.addBookMarkAction(bookmark["title"], bookmark["url"], initial=True)
-
-    def addBookMarkAction(self, title, url, initial=False):
-        bookmark = {"title": title, "url": url}
-        if not initial: 
-            print(f"self.bookmark_list : {self.bookmark_list}")
-
-            reply = QMessageBox.question(self, "Manage Bookmark", url, QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.Yes)
-            if reply == QMessageBox.StandardButton.No: 
-                return
-        fm = QFontMetrics(self.font())
-        if bookmark not in self.bookmark_list:
-            text = fm.elidedText(title, Qt.TextElideMode.ElideRight, self.PXLSIZE)
-            action = self.addAction(text)
-            action.setData(bookmark)
-            self.bookmark_list.append(bookmark)
-
-    @pyqtSlot(QAction)
-    def onActionTriggered(self, action):
-        bookmark = action.data()
-        bkmrk_url = QUrl(bookmark["url"])
-        self.bookmarkClicked.emit(bkmrk_url, bookmark["title"])
-
 class MainWindow(QMainWindow):
     """
     this process, running in the calibre environment, is detached from calibre program
