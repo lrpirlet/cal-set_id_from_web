@@ -174,8 +174,8 @@ class Bookmark_Dialog(QDialog):
         self.home_bkmrk_sgnl.emit()
         self.close()
 
-    def url_title(self, bookmark_title):
-        # print(f"in url_title, bookmark : {bookmark_title}")
+    def bkmrk_title(self, bookmark_title):
+        # print(f"in bkmrk_title, bookmark : {bookmark_title}")
         self.bookmark_title = bookmark_title
         self.pgtitle.setText(bookmark_title)
         self.pgtitle.setCursorPosition(0)
@@ -210,7 +210,30 @@ class BookMarkToolBar(QToolBar):
         print("in readSetting")
         setting = QSettings(Path.home().as_posix() + "/.test_bookmark25/MyApp.ini", QSettings.Format.IniFormat) # avoid using registry
         self.defaultUrl = setting.value("defaultUrl", 'http://www.google.com')
-        self.setBoorkMarks(setting.value("bookmarks", []))
+        bookmarks = setting.value("bookmarks", [])
+        if not bookmarks: bookmarks = []
+        for bookmark in bookmarks:
+            print(f"bookmark : {bookmark}")
+            self.title, self.url = bookmark["title"], bookmark["url"]       # needed for initial load
+            self.add_bkmrk(self.title)
+
+    def bkmrk_select_action(self, title, url):          # do not modify
+        '''
+        Jump here, from MainWindow, on a click on the bookmark icon,
+        the title must be edited to fit in the bookmark tool bar on the side,
+        the result will be acted upon depending on the button pressed (add, remove, sort, set home)
+        The tile will become an item of the bookmark dictionary (key is title, value is url)
+        '''
+        self.title, self.url = title, url               # needed in initial load
+
+        print(f"in bkmrk_select_action, title : {self.title}, url : {self.url}")
+                                                            # set up then jump to bookmark dialog in class Bookmark_Dialog(QDialog)
+        # print(f"self.bookmark_list : {self.bookmark_list}")
+        self.bkmrk_dlg.bkmrk_title(self.title)
+        self.cursor_pos = QCursor.pos()    
+        self.bkmrk_dlg.move(self.cursor_pos.x()-4*PXLSIZE,self.cursor_pos.y()+10)
+        if not self.bkmrk_dlg.exec():                                                   # make sure bkmrk_dlg was not closed
+            return
 
     def saveSettings(self):
         print ("in saveSettings")
@@ -256,26 +279,6 @@ class BookMarkToolBar(QToolBar):
     @pyqtSlot()
     def home_bkmrk(self):
         print("in home_bkmrk,I 'just' need to develop some")
-
-    def setBoorkMarks(self, bookmarks):
-        if not bookmarks: bookmarks = []
-        for bookmark in bookmarks:
-            print(f"bookmark : {bookmark}")
-            self.bkmrk_select_action(bookmark["title"], bookmark["url"], initial=True)  # need bkmrk_select_action to set both self.title and self.url
-
-    def bkmrk_select_action(self, title, url, initial=False):
-        self.title = title
-        self.url = url
-        print(f"in bkmrk_select_action, title : {self.title}, url : {self.url}")
-        if not initial:                                                                     # set up then jump to bookmark dialog in class Bookmark_Dialog(QDialog)
-            # print(f"self.bookmark_list : {self.bookmark_list}")
-            self.bkmrk_dlg.url_title(self.title)
-            self.cursor_pos = QCursor.pos()    
-            self.bkmrk_dlg.move(self.cursor_pos.x()-4*PXLSIZE,self.cursor_pos.y()+10)
-            if not self.bkmrk_dlg.exec():                                                   # jump
-                return
-        self.add_bkmrk(self.title)
-
 
     @pyqtSlot(QAction)
     def onActionTriggered(self, action):
