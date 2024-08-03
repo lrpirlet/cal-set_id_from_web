@@ -12,11 +12,12 @@ __copyright__ = '2022, Louis Richard Pirlet'
 
 from PyQt6.QtCore import (pyqtSlot, QUrl, QSize, Qt, pyqtSignal, QTimer, QSettings, QEventLoop)
 
-from PyQt6.QtWidgets import(QMainWindow, QToolBar, QLineEdit,QStatusBar, QProgressBar, 
+from PyQt6.QtWidgets import(QMainWindow, QToolBar, QLineEdit, QStatusBar, QProgressBar, 
                             QMessageBox, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-                            QPushButton, QInputDialog)
+                            QPushButton, QDialog, QGridLayout, QFrame, QLineEdit, QMenu,
+                            QListWidget, QListWidgetItem)
 
-from PyQt6.QtGui import (QAction, QShortcut, QKeySequence, QIcon, QFontMetrics)
+from PyQt6.QtGui import (QAction, QShortcut, QKeySequence, QIcon, QFontMetrics, QCursor)
 
 # from qt.webengine import QWebEngineView, QWebEnginePage
 
@@ -76,6 +77,109 @@ PXLSIZE = 125   # I need this constant in several classes
         # for handler in self.logger.handlers:
             # handler.flush()
 
+
+class Bookmark_Dialog(QDialog):
+  # signal generated 
+    srt_bkmrk_sgnl = pyqtSignal()
+    add_bkmrk_sgnl = pyqtSignal(str)
+    del_bkmrk_sgnl = pyqtSignal(str)
+    home_bkmrk_sgnl = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.PXLSIZE = PXLSIZE
+
+        self.setWindowTitle("Manage bookmark")
+
+        bkmrk_layout = QVBoxLayout()
+        button_layout = QHBoxLayout()
+        label_layout = QGridLayout()
+
+        srt_btn = QPushButton("Sort bookmark")
+        add_btn = QPushButton("Add bookmark")
+        add_btn.setDefault(True)
+        del_btn = QPushButton("Delete bookmark")
+        home_btn = QPushButton("Set home")
+
+        button_layout.addWidget(srt_btn)
+        button_layout.addWidget(add_btn)
+        button_layout.addWidget(del_btn)
+        button_layout.addWidget(home_btn)
+
+        srt_btn.pressed.connect(self.activate_srt)
+        add_btn.pressed.connect(self.activate_add)
+        del_btn.pressed.connect(self.activate_del)
+        home_btn.pressed.connect(self.activate_home)
+
+        label1 = QLabel("Page name:")
+        label2 = QLabel("Bookmark name:")
+
+        self.bkmrk = QLabel()
+        self.bkmrk.setFixedWidth(self.PXLSIZE) 
+        self.bkmrk.setFrameStyle(QFrame.Shape.Panel | QFrame.Shadow.Sunken)
+
+        self.pgtitle = QLineEdit()
+        self.pgtitle.setFixedWidth(self.PXLSIZE*3)
+        self.pgtitle.setToolTip("Edit this line until the Bookmark name does show on a green background to get a non truncated bookmark name")
+        self.pgtitle.textChanged.connect(self.display_edited_bookmark)
+
+        label_layout.addWidget(label1,       0, 0)
+        label_layout.addWidget(self.pgtitle, 0, 1)
+        label_layout.addWidget(label2,       1, 0)
+        label_layout.addWidget(self.bkmrk,   1, 1)
+        label_layout.setRowMinimumHeight(1, 30)
+        
+        bkmrk_layout.addLayout(label_layout)
+        bkmrk_layout.addLayout(button_layout)
+
+        self.setLayout(bkmrk_layout)
+
+    @pyqtSlot(str)
+    def display_edited_bookmark(self, bkmrk):
+        print(f"in display_edited_bookmark, bookmark = {bkmrk}")
+        fm = QFontMetrics(self.font())
+        bkmrk = fm.elidedText(bkmrk, Qt.TextElideMode.ElideRight, self.PXLSIZE-5)
+        if bkmrk[-1] == "…":
+            self.bkmrk.setStyleSheet("background-color: red")
+        else:
+            self.bkmrk.setStyleSheet("background-color: lightgreen")
+        self.bkmrk.setText(bkmrk)
+
+    @pyqtSlot()
+    def activate_srt(self):
+        # self.stacklayout.setCurrentIndex(0)
+        print("activate_sort")
+        self.srt_bkmrk_sgnl.emit()
+        self.close()
+
+    @pyqtSlot()
+    def activate_add(self):
+        # self.stacklayout.setCurrentIndex(1)
+        print(f"activate_add, title : {self.pgtitle.text()}")
+        self.add_bkmrk_sgnl.emit(self.pgtitle.text())
+        self.close()
+
+    @pyqtSlot()
+    def activate_del(self):
+        # self.stacklayout.setCurrentIndex(2)
+        print(f"activate_delete, title : {self.bookmark_title}")
+        self.del_bkmrk_sgnl.emit(self.bookmark_title)
+        self.close()
+
+    @pyqtSlot()
+    def activate_home(self):
+        # self.stacklayout.setCurrentIndex(2)
+        print("activate_home")
+        self.home_bkmrk_sgnl.emit()
+        self.close()
+
+    def url_title(self, bookmark_title):
+        # print(f"in url_title, bookmark : {bookmark_title}")
+        self.bookmark_title = bookmark_title
+        self.pgtitle.setText(bookmark_title)
+        self.pgtitle.setCursorPosition(0)
+
 class BookMarkToolBar(QToolBar):
     '''
     Create a bookmark button in the toolbar. On press of this button, 
@@ -89,29 +193,89 @@ class BookMarkToolBar(QToolBar):
 
     def __init__(self, parent=None):
         super(BookMarkToolBar, self).__init__(parent)
+
         self.actionTriggered.connect(self.onActionTriggered)
         self.bookmark_list = []
-        self.PXLSIZE = PXLSIZE 
+        self.bkmrk_listWidget = QListWidget()
+        self.PXLSIZE = PXLSIZE
+        self.bkmrk_dlg = Bookmark_Dialog(self)
 
-    def setBoorkMarks(self, bookmarks):
-        for bookmark in bookmarks:
-            print(f"bookmark : {bookmark}")
-            self.addBookMarkAction(bookmark["title"], bookmark["url"], initial=True)
+      # signals
+        self.bkmrk_dlg.srt_bkmrk_sgnl.connect(self.srt_bkmrk)
+        self.bkmrk_dlg.add_bkmrk_sgnl.connect(self.add_bkmrk)
+        self.bkmrk_dlg.del_bkmrk_sgnl.connect(self.del_bkmrk)
+        self.bkmrk_dlg.home_bkmrk_sgnl.connect(self.home_bkmrk)
 
-    def addBookMarkAction(self, title, url, initial=False):
-        if not initial: 
-            print(f"self.bookmark_list : {self.bookmark_list}")
+    def readSettings(self):
+        print("in readSetting")
+        setting = QSettings(Path.home().as_posix() + "/.test_bookmark25/MyApp.ini", QSettings.Format.IniFormat) # avoid using registry
+        self.defaultUrl = setting.value("defaultUrl", 'http://www.google.com')
+        self.setBoorkMarks(setting.value("bookmarks", []))
 
-            reply = QMessageBox.question(self, "Manage Bookmark", url, QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.Yes)
-            if reply == QMessageBox.StandardButton.No: 
-                return
-        bookmark = {"title": title, "url": url}
+    def saveSettings(self):
+        print ("in saveSettings")
+        settings = QSettings(Path.home().as_posix() + "/.test_bookmark25/MyApp.ini", QSettings.Format.IniFormat) # avoid using registry
+        settings.setValue("defaultUrl", self.defaultUrl)
+        settings.setValue("bookmarks", self.bookmark_list)
+        settings.sync()
+
+      # signals handling
+    @pyqtSlot()
+    def srt_bkmrk(self):
+        print("in srt_bkmrk, I 'just' need to develop some")
+
+    @pyqtSlot(str)
+    def add_bkmrk(self, bkmrk_title):
+        print(f"in add_bkmrk, bkmrk_title : {bkmrk_title}")
+
+        bookmark = {"title": bkmrk_title, "url": self.url}
         fm = QFontMetrics(self.font())
         if bookmark not in self.bookmark_list:
-            text = fm.elidedText(title, Qt.TextElideMode.ElideRight, self.PXLSIZE)
+            text = fm.elidedText(bkmrk_title, Qt.TextElideMode.ElideRight, self.PXLSIZE)
+            print(f"in add_bkmrk, bkmrk_title : {text}")
             action = self.addAction(text)
             action.setData(bookmark)
             self.bookmark_list.append(bookmark)
+            self.bkmrk_listWidget.addItem
+            print(f"self.bookmark_list : {self.bookmark_list}")
+        self.saveSettings()
+
+    @pyqtSlot(str)
+    def del_bkmrk(self, bookmark_title):
+        print(f"in del_bkmrk, bkmrk_title : {bookmark_title}")
+        bookmark = {"title": bookmark_title, "url": self.url}
+        if bookmark in self.bookmark_list:
+            
+            self.removeAction(bookmark)
+            print(20*"-")
+            for i in range(len(self.bookmark_list)):
+                print(self.bookmark_list[i])
+            print(self.bookmark_list)
+            print(20*"-")     
+
+    @pyqtSlot()
+    def home_bkmrk(self):
+        print("in home_bkmrk,I 'just' need to develop some")
+
+    def setBoorkMarks(self, bookmarks):
+        if not bookmarks: bookmarks = []
+        for bookmark in bookmarks:
+            print(f"bookmark : {bookmark}")
+            self.bkmrk_select_action(bookmark["title"], bookmark["url"], initial=True)  # need bkmrk_select_action to set both self.title and self.url
+
+    def bkmrk_select_action(self, title, url, initial=False):
+        self.title = title
+        self.url = url
+        print(f"in bkmrk_select_action, title : {self.title}, url : {self.url}")
+        if not initial:                                                                     # set up then jump to bookmark dialog in class Bookmark_Dialog(QDialog)
+            # print(f"self.bookmark_list : {self.bookmark_list}")
+            self.bkmrk_dlg.url_title(self.title)
+            self.cursor_pos = QCursor.pos()    
+            self.bkmrk_dlg.move(self.cursor_pos.x()-4*PXLSIZE,self.cursor_pos.y()+10)
+            if not self.bkmrk_dlg.exec():                                                   # jump
+                return
+        self.add_bkmrk(self.title)
+
 
     @pyqtSlot(QAction)
     def onActionTriggered(self, action):
@@ -394,7 +558,7 @@ class MainWindow(QMainWindow):
         self.bookmarkToolbar = BookMarkToolBar("Bookmark")
         self.bookmarkToolbar.setMovable(False)   
         self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self.bookmarkToolbar)   
-        self.readSettings()                             # initial fill of home, and remembered URL of interest
+        self.bookmarkToolbar.readSettings()                             # initial fill of home, and remembered URL of interest
   # set status bar
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
@@ -507,25 +671,13 @@ class MainWindow(QMainWindow):
   # Bookmark actions   
     def addFavoriteClicked(self):
         loop = QEventLoop()
-
         def callback(resp):
             setattr(self, "title", resp)
             loop.quit()
-
         self.browser.page().runJavaScript("(function() { return document.title;})();", callback)
         chsn_url = self.urlbox.text()
         loop.exec()
-        self.bookmarkToolbar.addBookMarkAction(getattr(self, "title"), chsn_url) 
-
-    def readSettings(self):
-        setting = QSettings(Path.home().as_posix() + "/.test_bookmark2/MyApp.ini", QSettings.Format.IniFormat) # avoid using registry
-        self.defaultUrl = setting.value("defaultUrl", 'http://www.google.com')
-        self.bookmarkToolbar.setBoorkMarks(setting.value("bookmarks", []))
-
-    def saveSettins(self):
-        settings = QSettings(Path.home().as_posix() + "/.test_bookmark2/MyApp.ini", QSettings.Format.IniFormat) # avoid using registry
-        settings.setValue("defaultUrl", self.defaultUrl)
-        settings.setValue("bookmarks", self.bookmarkToolbar.bookmark_list)
+        self.bookmarkToolbar.bkmrk_select_action(getattr(self, "title"), chsn_url) 
 
   # exit actions
     def select_and_exit(self):                    # sent response over report_returned_id file in temp dir
@@ -563,7 +715,6 @@ class MainWindow(QMainWindow):
             event.ignore()
 
     def lets_go(self):
-        self.saveSettins()
         QApplication.instance().quit()   # Application.instance().quit()     # lrp
 
 def main(data):

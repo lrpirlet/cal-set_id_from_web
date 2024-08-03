@@ -91,6 +91,7 @@ class Bookmark_Dialog(QDialog):
         # self.stacklayout.setCurrentIndex(1)
         print(f"activate_add, title : {self.pgtitle.text()}")
         self.add_bkmrk_sgnl.emit(self.pgtitle.text())
+        self.close()
 
     @pyqtSlot()
     def activate_del(self):
