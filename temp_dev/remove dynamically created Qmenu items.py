@@ -73,19 +73,19 @@ class MenuManager(QWidget):
         self.add_btn.clicked.connect(self.add_item)
 
         self.menu = QMenu(menuname)
-        self.read_settings()
+        self.load_settings()
 
-    def read_settings(self):
+    def load_settings(self):
         load_items = self.settings.value(self.key, [])
         if DEBUG : print(f"self.key : {self.key}")
         # 
         if DEBUG : print(f"load_items = self.settings.value(self.key, []) : {load_items}")
         # load_items = self.settings.value(self.key, []) : {'item0': ['itemdata00', 'itemdata01', 'itemdata02'], 'item1': ['itemdata10', 'itemdata11', 'itemdata12'], 'item2': ['itemdata20', 'itemdata21', 'itemdata22']}
         if not load_items: load_items = {}
-        for name, itemdata in load_items.items():
-            if  DEBUG : print(f"name, itemdata : {name, itemdata}")
-            # name, itemdata : ('item0', ['itemdata00', 'itemdata01', 'itemdata02'])
-            self.add_one_item(name, itemdata)
+        for bkmrk_title, bkmrk_url in load_items.items():
+            if  DEBUG : print(f"bkmrk_title, bkmrk_url : {bkmrk_title, bkmrk_url}")
+            # bkmrk_title, bkmrk_url : ('item0', ['itemdata00', 'itemdata01', 'itemdata02'])
+            self.add_one_item(bkmrk_title, bkmrk_url)
 
     def remove_items(self):
         if  DEBUG : print("in remove_items")
@@ -100,22 +100,22 @@ class MenuManager(QWidget):
         if  DEBUG : print("in add_item")
         # in add_item
         for i in range(3):
-            name = "item{}".format(i)
-            itemdata = ["itemdata{}{}".format(i, j) for j in range(3)]
-            if  DEBUG : print(name, " : ", itemdata)
+            bkmrk_title = "item{}".format(i)
+            bkmrk_url = ["bkmrk_url{}{}".format(i, j) for j in range(3)]
+            if  DEBUG : print(bkmrk_title, " : ", bkmrk_url)
             # item0  :  ['itemdata00', 'itemdata01', 'itemdata02']
-            self.add_one_item(name, itemdata)
+            self.add_one_item(bkmrk_title, bkmrk_url)
 
 
-    def add_one_item(self, name, itemdata):
-            if  DEBUG : print(f"in add_one_item; name : {name}, itemdata : {itemdata}")
-            # in add_one_item; name : item0, itemdata : ['itemdata00', 'itemdata01', 'itemdata02']
-            if not self.listWidget.findItems(name, Qt.MatchFlag.MatchExactly):
-                action = QAction(name, self.menu)
-                action.setData(itemdata)
+    def add_one_item(self, bkmrk_title, bkmrk_url):
+            if  DEBUG : print(f"in add_one_item; bkmrk_title : {bkmrk_title}, bkmrk_url : {bkmrk_url}")
+            # in add_one_item; bkmrk_title : item0, bkmrk_url : ['itemdata00', 'itemdata01', 'itemdata02']
+            if not self.listWidget.findItems(bkmrk_title, Qt.MatchFlag.MatchExactly):
+                action = QAction(bkmrk_title, self.menu)
+                action.setData(bkmrk_url)
                 self.menu.addAction(action)
 
-                item = QListWidgetItem(name)
+                item = QListWidgetItem(bkmrk_title)
                 item.setData(Qt.ItemDataRole.UserRole, action)
                 self.listWidget.addItem(item)
                 self.sync_data()

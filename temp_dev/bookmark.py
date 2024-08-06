@@ -35,6 +35,8 @@ class BookMarkToolBar(QToolBar):
     @pyqtSlot(QAction)
     def onActionTriggered(self, action):
         bookmark = action.data()
+        print(f'bookmark["url"] : {bookmark["url"]}')
+        print(f'type(bookmark["url"]) : {type(bookmark["url"])}')
         self.bookmarkClicked.emit(bookmark["url"], bookmark["title"])
 
 

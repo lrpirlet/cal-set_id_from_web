@@ -59,6 +59,9 @@ from pathlib import Path
 
 PXLSIZE = 125   # I need this constant in several classes 
 
+DEBUG = True
+DEBUG = False
+
 # class StreamToLogger(object):
     # """
     # Fake file-like stream object that redirects writes to a logger instance.
@@ -82,7 +85,7 @@ class Bookmark_Dialog(QDialog):
   # signal generated 
     srt_bkmrk_sgnl = pyqtSignal()
     add_bkmrk_sgnl = pyqtSignal(str)
-    del_bkmrk_sgnl = pyqtSignal(str)
+    del_bkmrk_sgnl = pyqtSignal()
     home_bkmrk_sgnl = pyqtSignal()
 
     def __init__(self, parent=None):
@@ -137,7 +140,7 @@ class Bookmark_Dialog(QDialog):
 
     @pyqtSlot(str)
     def display_edited_bookmark(self, bkmrk):
-        print(f"in display_edited_bookmark, bookmark = {bkmrk}")
+        if DEBUG : print(f"in display_edited_bookmark, bookmark = {bkmrk}")
         fm = QFontMetrics(self.font())
         bkmrk = fm.elidedText(bkmrk, Qt.TextElideMode.ElideRight, self.PXLSIZE-5)
         if bkmrk[-1] == "…":
@@ -148,34 +151,30 @@ class Bookmark_Dialog(QDialog):
 
     @pyqtSlot()
     def activate_srt(self):
-        # self.stacklayout.setCurrentIndex(0)
-        print("activate_sort")
+        if DEBUG : print("in activate_sort")
         self.srt_bkmrk_sgnl.emit()
         self.close()
 
     @pyqtSlot()
     def activate_add(self):
-        # self.stacklayout.setCurrentIndex(1)
-        print(f"activate_add, title : {self.pgtitle.text()}")
+        if DEBUG : print(f"in activate_add, title : {self.pgtitle.text()}")
         self.add_bkmrk_sgnl.emit(self.pgtitle.text())
         self.close()
 
     @pyqtSlot()
     def activate_del(self):
-        # self.stacklayout.setCurrentIndex(2)
-        print(f"activate_delete, title : {self.bookmark_title}")
-        self.del_bkmrk_sgnl.emit(self.bookmark_title)
+        if DEBUG : print(f"in activate_delete")
+        self.del_bkmrk_sgnl.emit()
         self.close()
 
     @pyqtSlot()
     def activate_home(self):
-        # self.stacklayout.setCurrentIndex(2)
-        print("activate_home")
+        if DEBUG : print("in activate_home")
         self.home_bkmrk_sgnl.emit()
         self.close()
 
     def bkmrk_title(self, bookmark_title):
-        # print(f"in bkmrk_title, bookmark : {bookmark_title}")
+        if DEBUG : print("in bkmrk_title")
         self.bookmark_title = bookmark_title
         self.pgtitle.setText(bookmark_title)
         self.pgtitle.setCursorPosition(0)
@@ -189,33 +188,34 @@ class BookMarkToolBar(QToolBar):
     On click on a bookmark item, the webengine will go to the corresponding url.
     '''
   # signal generated for a press on a bookmark item in the bookmark (vertical) bar
-    bookmarkClicked = pyqtSignal(QUrl, str)
+    bookmark_clicked = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super(BookMarkToolBar, self).__init__(parent)
 
         self.actionTriggered.connect(self.onActionTriggered)
-        self.bookmark_list = []
-        self.bkmrk_listWidget = QListWidget()
+        self.bkmrk_list = QListWidget()
+        self.bkmrk_list.setSortingEnabled(False)
         self.PXLSIZE = PXLSIZE
         self.bkmrk_dlg = Bookmark_Dialog(self)
+        self.settings = QSettings(Path.home().as_posix() + "/.test_bookmark3/MyApp.ini", QSettings.Format.IniFormat) # avoid using registry
 
       # signals
-        self.bkmrk_dlg.srt_bkmrk_sgnl.connect(self.srt_bkmrk)
+        self.bkmrk_dlg.srt_bkmrk_sgnl.connect(self.sort_bookmark)
         self.bkmrk_dlg.add_bkmrk_sgnl.connect(self.add_bkmrk)
         self.bkmrk_dlg.del_bkmrk_sgnl.connect(self.del_bkmrk)
         self.bkmrk_dlg.home_bkmrk_sgnl.connect(self.home_bkmrk)
 
-    def readSettings(self):
-        print("in readSetting")
-        setting = QSettings(Path.home().as_posix() + "/.test_bookmark25/MyApp.ini", QSettings.Format.IniFormat) # avoid using registry
-        self.defaultUrl = setting.value("defaultUrl", 'http://www.google.com')
-        bookmarks = setting.value("bookmarks", [])
-        if not bookmarks: bookmarks = []
-        for bookmark in bookmarks:
-            print(f"bookmark : {bookmark}")
-            self.title, self.url = bookmark["title"], bookmark["url"]       # needed for initial load
-            self.add_bkmrk(self.title)
+    def load_settings(self):
+        if DEBUG : print("in load_settings")
+        load_items = self.settings.value("bookmarks", [])
+        if DEBUG : print(f"load_items = self.settings.value('bookmarks', []) : {load_items}")
+        if not load_items: load_items = []
+        for i in range(len(load_items)):
+            print(f'load_items[{i}] : {load_items[i]}')
+            self.bkmrk_title, self.bkmrk_url = load_items[i][0], load_items[i][1]                           # needed for initial load
+            if  DEBUG : print(f"self.bkmrk_title, self.bkmrk_url : {self.bkmrk_title, self.bkmrk_url}")
+            self.add_bkmrk(self.bkmrk_title)
 
     def bkmrk_select_action(self, title, url):          # do not modify
         '''
@@ -224,67 +224,102 @@ class BookMarkToolBar(QToolBar):
         the result will be acted upon depending on the button pressed (add, remove, sort, set home)
         The tile will become an item of the bookmark dictionary (key is title, value is url)
         '''
-        self.title, self.url = title, url               # needed in initial load
-
-        print(f"in bkmrk_select_action, title : {self.title}, url : {self.url}")
-                                                            # set up then jump to bookmark dialog in class Bookmark_Dialog(QDialog)
-        # print(f"self.bookmark_list : {self.bookmark_list}")
-        self.bkmrk_dlg.bkmrk_title(self.title)
+        self.bkmrk_title, self.bkmrk_url = title, url               # needed in initial load
+        if DEBUG : print(f"in bkmrk_select_action, title : {self.bkmrk_title}, bkmrk_url : {self.bkmrk_url}")
+        self.bkmrk_dlg.bkmrk_title(self.bkmrk_title)
         self.cursor_pos = QCursor.pos()    
         self.bkmrk_dlg.move(self.cursor_pos.x()-4*PXLSIZE,self.cursor_pos.y()+10)
         if not self.bkmrk_dlg.exec():                                                   # make sure bkmrk_dlg was not closed
             return
 
-    def saveSettings(self):
-        print ("in saveSettings")
-        settings = QSettings(Path.home().as_posix() + "/.test_bookmark25/MyApp.ini", QSettings.Format.IniFormat) # avoid using registry
-        settings.setValue("defaultUrl", self.defaultUrl)
-        settings.setValue("bookmarks", self.bookmark_list)
-        settings.sync()
+    def sync_data(self):
+        if DEBUG : print ("in sync_data")
+        save_items = []
+        print(f"self.bkmrk_list.count() : {self.bkmrk_list.count()}")
+        for i in range(self.bkmrk_list.count()):
+            it = self.bkmrk_list.item(i)
+            if  DEBUG : print(f"it.text() : {it.text()}") 
+            action = it.data(Qt.ItemDataRole.UserRole)
+            save_items.append((it.text(),action.data()))    
+            if  DEBUG : print(f"save_items[{i}] : {save_items[i]}")
+        self.settings.setValue("bookmarks", save_items)
+        self.settings.sync()
 
       # signals handling
     @pyqtSlot()
-    def srt_bkmrk(self):
-        print("in srt_bkmrk, I 'just' need to develop some")
+    def sort_bookmark(self):
+        DEBUG = True
+        if DEBUG : print("in sort_bookmark")
+      # create a list of label-url, order that list
+        srt_lst = []
+        for i in reversed(range(self.bkmrk_list.count())):
+            it = self.bkmrk_list.item(i)
+            if not it: 
+                break
+            if DEBUG : print("before : ", it.text(), it.data(Qt.ItemDataRole.UserRole).data())
+            srt_lst.append((it.text(), it.data(Qt.ItemDataRole.UserRole).data()))
+      # remove all bkmrk
+            self.bkmrk_list.takeItem(self.bkmrk_list.row(it))
+            action = it.data(Qt.ItemDataRole.UserRole)
+            self.removeAction(action)
+      # order the list
+        srt_lst.sort(key = lambda x: x[0].lower())
+      # add all from ordered list
+        for i in range(len(srt_lst)):
+            ttl, rl = srt_lst[i]
+            action = self.addAction(ttl)
+            action.setData(rl)
+            item = QListWidgetItem(ttl)
+            item.setData(Qt.ItemDataRole.UserRole, action)
+            self.bkmrk_list.addItem(item)
+            if DEBUG : print("after  : ",ttl, rl)
+      # save setting
+        self.sync_data()
 
     @pyqtSlot(str)
     def add_bkmrk(self, bkmrk_title):
-        print(f"in add_bkmrk, bkmrk_title : {bkmrk_title}")
-
-        bookmark = {"title": bkmrk_title, "url": self.url}
+        '''
+        add an entry in the bookmark, with the label returned from the bookmark dialog
+        except is there is an entry with the same label
+        '''
+        if DEBUG : print(f"in add_bkmrk, bkmrk_title : {bkmrk_title}")
         fm = QFontMetrics(self.font())
-        if bookmark not in self.bookmark_list:
-            text = fm.elidedText(bkmrk_title, Qt.TextElideMode.ElideRight, self.PXLSIZE)
-            print(f"in add_bkmrk, bkmrk_title : {text}")
-            action = self.addAction(text)
-            action.setData(bookmark)
-            self.bookmark_list.append(bookmark)
-            self.bkmrk_listWidget.addItem
-            print(f"self.bookmark_list : {self.bookmark_list}")
-        self.saveSettings()
+        bkmrk_title = fm.elidedText(bkmrk_title, Qt.TextElideMode.ElideRight, self.PXLSIZE)
+        if not self.bkmrk_list.findItems(bkmrk_title, Qt.MatchFlag.MatchExactly):
+            action=self.addAction(bkmrk_title)
+            action.setData(self.bkmrk_url)
+            item = QListWidgetItem(bkmrk_title)
+            item.setData(Qt.ItemDataRole.UserRole, action)
+            self.bkmrk_list.addItem(item)
+        self.sync_data()
 
-    @pyqtSlot(str)
-    def del_bkmrk(self, bookmark_title):
-        print(f"in del_bkmrk, bkmrk_title : {bookmark_title}")
-        bookmark = {"title": bookmark_title, "url": self.url}
-        if bookmark in self.bookmark_list:
-            
-            self.removeAction(bookmark)
-            print(20*"-")
-            for i in range(len(self.bookmark_list)):
-                print(self.bookmark_list[i])
-            print(self.bookmark_list)
-            print(20*"-")     
+    @pyqtSlot()
+    def del_bkmrk(self):
+        '''
+        remove any label with an identic url compared to the url displayed during 
+        the bookmark dialog. The list will be searched in reverse so that removed
+        bookmark in the list will not change the index of possible next match.
+        '''
+        if DEBUG : print(f"in del_bkmrk")
+        for i in reversed(range(self.bkmrk_list.count())):
+            it = self.bkmrk_list.item(i)
+            if self.bkmrk_url == it.data(Qt.ItemDataRole.UserRole).data():
+                action = it.data(Qt.ItemDataRole.UserRole)
+                self.removeAction(action)
+                self.bkmrk_list.takeItem(self.bkmrk_list.row(it))
+        self.sync_data()
+
 
     @pyqtSlot()
     def home_bkmrk(self):
-        print("in home_bkmrk,I 'just' need to develop some")
+        if DEBUG : print("in home_bkmrk,I 'just' need to develop some")
 
     @pyqtSlot(QAction)
     def onActionTriggered(self, action):
-        bookmark = action.data()
-        bkmrk_url = QUrl(bookmark["url"])
-        self.bookmarkClicked.emit(bkmrk_url, bookmark["title"])
+        if DEBUG : print("in onActionTriggered")
+        url = action.data()
+        if DEBUG : print(f"action.data() : {action.data()} = url : {url}")
+        self.bookmark_clicked.emit(url)
 class Search_Panel(QWidget):
     '''
     A dynamic search panel. Shows up on signal "searched" when search is activated (via button or <ctrl f>).
@@ -349,7 +384,6 @@ class MainWindow(QMainWindow):
     In fact this is a WEB browser centered on www.noosfere.org to get the nsfr_id of a choosen volume.
 
     """
-
     def __init__(self, data):
         super().__init__()
 
@@ -394,26 +428,25 @@ class MainWindow(QMainWindow):
         self.isbn_btn.clicked.connect(partial(self.set_noosearch_page, "isbn"))
         self.auteurs_btn.clicked.connect(partial(self.set_noosearch_page, "auteurs"))
         self.titre_btn.clicked.connect(partial(self.set_noosearch_page, "titre"))
-        self.bookmarkToolbar.bookmarkClicked.connect(self.set_from_bookmark)
-
+        self.bookmarkToolbar.bookmark_clicked.connect(self.goto_this_url)   #  set_from_bookmark)
 
       # browser
     def set_browser(self):
 
-        print("in set_browser")
+        if DEBUG : print("in set_browser")
         self.browser = QWebEngineView()
         self.browser.setUrl(QUrl("http://www.google.com"))
     
       # profile, remeber cookies
     def set_profile(self):
         profile = QWebEngineProfile("savecookies", self.browser)
-        print(f"unset... {QWebEngineProfile.persistentCookiesPolicy(profile)}, of the record? : {profile.isOffTheRecord()}") 
+        if DEBUG : print(f"unset... {QWebEngineProfile.persistentCookiesPolicy(profile)}, of the record? : {profile.isOffTheRecord()}") 
 
         profile.setPersistentCookiesPolicy(QWebEngineProfile.PersistentCookiesPolicy.ForcePersistentCookies)
-        print(f"set... {QWebEngineProfile.persistentCookiesPolicy(profile)}, of the record? : {profile.isOffTheRecord()}")
+        if DEBUG : print(f"set... {QWebEngineProfile.persistentCookiesPolicy(profile)}, of the record? : {profile.isOffTheRecord()}")
 
         browser_storage_folder = Path.home().as_posix() + '/.test_cookies'
-        print(f"browser_storagefolder : {browser_storage_folder}")
+        if DEBUG : print(f"browser_storagefolder : {browser_storage_folder}")
         
         profile.setPersistentStoragePath(browser_storage_folder)
 
@@ -422,7 +455,7 @@ class MainWindow(QMainWindow):
             
       # info boxes
     def set_isbn_box(self):        # info boxes isbn
-        print("in set_isbn_box")
+        if DEBUG : print("in set_isbn_box")
         self.isbn_btn = QPushButton(" ISBN ", self)
         self.isbn_btn.setToolTip('Action sur la page noosfere initiale: "Mots-clefs à rechercher" = ISBN, coche la case "Livre".')
                                    # Action on home page: "Mots-clefs à rechercher" = ISBN, set checkbox "Livre".
@@ -437,7 +470,7 @@ class MainWindow(QMainWindow):
         self.isbn_lt.addWidget(self.isbn_dsp)
 
     def set_auteurs_box(self):                  # info boxes auteurs
-        print("in set_auteurs_box")
+        if DEBUG : print("in set_auteurs_box")
         self.auteurs_btn = QPushButton("Auteur(s)", self)
         self.auteurs_btn.setToolTip('Action sur la page noosfere initiale: "Mots-clefs à rechercher" = Auteur(s), coche la case "Auteurs".')
                                       # Action on home page: "Mots-clefs à rechercher" = Auteur(s), set checkbox "Auteurs".
@@ -451,7 +484,7 @@ class MainWindow(QMainWindow):
         self.auteurs_lt.addWidget(self.auteurs_dsp)
 
     def set_titre_box(self):                    # info boxes titre
-        print("in set_titre_box")
+        if DEBUG : print("in set_titre_box")
         self.titre_btn = QPushButton("Titre", self)
         self.titre_btn.setToolTip('Action sur la page noosfere initiale: "Mots-clefs à rechercher" = Titre, coche la case "Livres".')
                                     # Action on home page: "Mots-clefs à rechercher" = Titre, set checkbox "Livres".
@@ -466,7 +499,7 @@ class MainWindow(QMainWindow):
 
   # search bar hidden when inactive ready to find something (I hope :-) )
     def set_search_bar(self):
-        print("in set_search_bar")
+        if DEBUG : print("in set_search_bar")
         self.search_pnl = Search_Panel()
         self.search_toolbar = QToolBar()
         self.search_toolbar.addWidget(self.search_pnl)
@@ -476,7 +509,7 @@ class MainWindow(QMainWindow):
         self.search_pnl.closesrch.connect(self.search_toolbar.hide)
 
     def join_all_boxes(self):                   # put all that together, center, size and make it central widget
-        print("in join_all_boxes")
+        if DEBUG : print("in join_all_boxes")
         layout = QVBoxLayout()
         layout.addWidget(self.browser)
         layout.addLayout(self.isbn_lt)
@@ -491,7 +524,7 @@ class MainWindow(QMainWindow):
 
       # set navigation toolbar
     def set_nav_and_status_bar(self) :
-        print("in set_nav_and_status_bar")
+        if DEBUG : print("in set_nav_and_status_bar")
         nav_tb = QToolBar("Navigation")
         nav_tb.setIconSize(QSize(24,24))
         nav_tb.setMovable(False)
@@ -558,10 +591,10 @@ class MainWindow(QMainWindow):
         nav_tb.addAction(exit_btn)
   # bookmark bar (need a def)
         self.addToolBarBreak()
-        self.bookmarkToolbar = BookMarkToolBar("Bookmark")
-        self.bookmarkToolbar.setMovable(False)   
+        self.bookmarkToolbar = BookMarkToolBar()
+        self.bookmarkToolbar.setMovable(True)   
         self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self.bookmarkToolbar)   
-        self.bookmarkToolbar.readSettings()                             # initial fill of home, and remembered URL of interest
+        self.bookmarkToolbar.load_settings()                             # initial fill of home, and remembered URL of interest
   # set status bar
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
@@ -577,7 +610,7 @@ class MainWindow(QMainWindow):
   # search action
     @pyqtSlot(str, QWebEnginePage.FindFlag)
     def on_searched(self, text, flag):
-        print("in on_searched text : {}, flag : {}".format(text, flag))
+        if DEBUG : print("in on_searched text : {}, flag : {}".format(text, flag))
         def callback(found):
             if text and not found:
                 self.msg_label.setText('Désolé, {} pas trouvé...'.format(text))     # Sorry "text" not found
@@ -588,7 +621,7 @@ class MainWindow(QMainWindow):
   # info boxes actions
     @pyqtSlot()
     def set_noosearch_page(self, iam):
-        print("in set_noosearch_page iam : {}".format(iam))
+        if DEBUG : print("in set_noosearch_page iam : {}".format(iam))
         if self.urlbox.text() == "https://www.noosfere.org/livres/noosearch.asp":
             if iam == "isbn": val = self.isbn
             elif iam == "auteurs": val = self.auteurs
@@ -609,34 +642,37 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def wake_search_panel(self):
-        print("in wake_search_panel")
+        if DEBUG : print("in wake_search_panel")
         self.search_toolbar.show()
 
-  # Navigation actions
-    def set_from_bookmark(self, bkmrk_url = QUrl(), label = 'Blank'):
-        print(f"in set_from_bookmark bkmrk_url : {bkmrk_url}, label : {label}")
-        self.goto_this_url(bkmrk_url)
-        
+#   # bookmark actions
+#     @pyqtSlot(str)
+#     def set_from_bookmark(self, bkmrk_url):
+#         DEBUG = True
+#         if DEBUG : print(f"in set_from_bookmark bkmrk_url : {bkmrk_url}")
+#         self.goto_this_url(url=bkmrk_url)
+
+  # Navigation actions      
     def goto_this_url(self, url="http://www.google.com"):
-        print("in goto_this_url url : {}".format(url))
+        if DEBUG : print("in goto_this_url url : {}".format(url))
         self.browser.setUrl(QUrl(url))
 
     def navigate_home(self):
-        print("in navigate_home")
+        if DEBUG : print("in navigate_home")
         self.browser.setUrl(QUrl("https://www.noosfere.org/livres/noosearch.asp"))
 
     def navigate_to_url(self):                    # Does not receive the Url, activated when url bar is manually changed
-        print("in navigate_to_url")
+        if DEBUG : print("in navigate_to_url")
         q = QUrl(self.urlbox.text())
         self.browser.setUrl(q)
 
     def update_urlbar(self, q):
-        print("in update_urlbar")
+        if DEBUG : print("in update_urlbar")
         self.urlbox.setText(q.toString())
         self.urlbox.setCursorPosition(0)
 
     def loading_title(self):
-        print("in loading_title")
+        if DEBUG : print("in loading_title")
       # anytime we change page we come here... let's clear and hide the search panel
         self.search_pnl.closesrch.emit()           # by sending a close search panel signal
       # before doubling indication that we load a page in the title
@@ -644,28 +680,28 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(title)
 
     def update_title(self):
-        print("in update_title")
+        if DEBUG : print("in update_title")
         title = self.browser.page().title()
         self.setWindowTitle(title)
 
     def report_returned_id(self, returned_id):
-        print("in report_returned_id returned_id : {}".format(returned_id))
+        if DEBUG : print("in report_returned_id returned_id : {}".format(returned_id))
         report_tpf=open(os.path.join(tempfile.gettempdir(),"nsfr_utl_report_returned_id"),"w")
         report_tpf.write(returned_id)
         report_tpf.close
 
     def set_progress_bar(self):
-        print("in set_progress_bar")
+        if DEBUG : print("in set_progress_bar")
         self.page_load_pb.show()
         self.page_load_label.show()
 
     def update_progress_bar(self, progress):
-        print("in update_progress_bar progress : {}".format(progress))
+        if DEBUG : print("in update_progress_bar progress : {}".format(progress))
         self.page_load_pb.setValue(progress)
         self.page_load_label.setText("En téléchargement de l'url... ({}/100)".format(str(progress)))
 
     def reset_progress_bar(self):
-        print("in reset_progress_bar")
+        if DEBUG : print("in reset_progress_bar")
         def wait_a_minut():
             self.page_load_pb.hide()
             self.page_load_label.hide()
@@ -685,32 +721,32 @@ class MainWindow(QMainWindow):
   # exit actions
     def select_and_exit(self):                    # sent response over report_returned_id file in temp dir
       # create a temp file with name starting with nsfr_id
-        print("in select_and_exit")
+        if DEBUG : print("in select_and_exit")
         choosen_url = self.urlbox.text()
         if "numlivre=" in choosen_url:
-            print('choosen_url : ',choosen_url)
+            if DEBUG : print('choosen_url : ',choosen_url)
             nsfr_id = "vl$"+choosen_url.split("numlivre=")[1]
-            print("nsfr_id : ", nsfr_id)
+            if DEBUG : print("nsfr_id : ", nsfr_id)
             self.report_returned_id(nsfr_id)
         else:
-            print('No book selected, no change will take place: unset')
+            if DEBUG : print('No book selected, no change will take place: unset')
             self.report_returned_id("unset")
         self.lets_go()
 
     def abort_book(self):                         # we want to NOT change the book and proceed to the next one
-        print("in abort_book")
+        if DEBUG : print("in abort_book")
         reply = QMessageBox.question(self, 'Certain', "Oublier ce livre et passer au suivant", QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.Yes)
         if reply == QMessageBox.StandardButton.Yes:
-            print("WebEngineView was aborted: aborted")
+            if DEBUG : print("WebEngineView was aborted: aborted")
             self.report_returned_id("aborted")
             self.lets_go()
 
     def closeEvent(self, event):                  # abort hit window exit "X" button we stop processing this and all following books
-        print("in closeEvent event : {}".format(event))
+        if DEBUG : print("in closeEvent event : {}".format(event))
         reply = QMessageBox.question(self, 'Vraiment', "Quitter et ne plus rien changer", QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.Yes)
         if reply == QMessageBox.StandardButton.Yes:
             event.accept()
-            print("WebEngineView was closed: killed")
+            if DEBUG : print("WebEngineView was closed: killed")
             self.report_returned_id("killed")
             self.webpage.deleteLater()
             super().closeEvent(event)
