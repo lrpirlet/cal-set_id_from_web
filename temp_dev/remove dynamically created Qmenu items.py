@@ -35,7 +35,7 @@ class MainWindow(QWidget):
         super(MainWindow, self).__init__(parent)
         layout = QHBoxLayout(self)
 
-        menu_btn = QPushButton()
+        menu_btn = QPushButton('menu btn')
         open_list_btn = QPushButton('open list')
         layout.addWidget(menu_btn)
         layout.addWidget(open_list_btn)
@@ -99,7 +99,7 @@ class MenuManager(QWidget):
     def add_item(self):
         if  DEBUG : print("in add_item")
         # in add_item
-        for i in range(3):
+        for i in range(5):
             bkmrk_title = "item{}".format(i)
             bkmrk_url = ["bkmrk_url{}{}".format(i, j) for j in range(3)]
             if  DEBUG : print(bkmrk_title, " : ", bkmrk_url)

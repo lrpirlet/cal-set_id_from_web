@@ -15,7 +15,8 @@ from PyQt6.QtCore import (pyqtSlot, QUrl, QSize, Qt, pyqtSignal, QTimer, QSettin
 from PyQt6.QtWidgets import(QMainWindow, QToolBar, QLineEdit, QStatusBar, QProgressBar, 
                             QMessageBox, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                             QPushButton, QDialog, QGridLayout, QFrame, QLineEdit, QMenu,
-                            QListWidget, QListWidgetItem)
+                            QListWidget, QListWidgetItem, QGroupBox, QVBoxLayout
+                            )
 
 from PyQt6.QtGui import (QAction, QShortcut, QKeySequence, QIcon, QFontMetrics, QCursor)
 
@@ -80,12 +81,9 @@ DEBUG = False
         # for handler in self.logger.handlers:
             # handler.flush()
 
-
-class Bookmark_Dialog(QDialog):
+class Bookmark_add_Dialog(QDialog):
   # signal generated 
-    srt_bkmrk_sgnl = pyqtSignal()
     add_bkmrk_sgnl = pyqtSignal(str)
-    del_bkmrk_sgnl = pyqtSignal()
     home_bkmrk_sgnl = pyqtSignal()
 
     def __init__(self, parent=None):
@@ -99,20 +97,14 @@ class Bookmark_Dialog(QDialog):
         button_layout = QHBoxLayout()
         label_layout = QGridLayout()
 
-        srt_btn = QPushButton("Sort bookmark")
         add_btn = QPushButton("Add bookmark")
         add_btn.setDefault(True)
-        del_btn = QPushButton("Delete bookmark")
         home_btn = QPushButton("Set home")
 
-        button_layout.addWidget(srt_btn)
         button_layout.addWidget(add_btn)
-        button_layout.addWidget(del_btn)
         button_layout.addWidget(home_btn)
 
-        srt_btn.pressed.connect(self.activate_srt)
         add_btn.pressed.connect(self.activate_add)
-        del_btn.pressed.connect(self.activate_del)
         home_btn.pressed.connect(self.activate_home)
 
         label1 = QLabel("Page name:")
@@ -128,7 +120,7 @@ class Bookmark_Dialog(QDialog):
         self.pgtitle.textChanged.connect(self.display_edited_bookmark)
 
         label_layout.addWidget(label1,       0, 0)
-        label_layout.addWidget(self.pgtitle, 0, 1)
+        label_layout.addWidget(self.pgtitle, 0, 1, 1, 3)
         label_layout.addWidget(label2,       1, 0)
         label_layout.addWidget(self.bkmrk,   1, 1)
         label_layout.setRowMinimumHeight(1, 30)
@@ -150,21 +142,9 @@ class Bookmark_Dialog(QDialog):
         self.bkmrk.setText(bkmrk)
 
     @pyqtSlot()
-    def activate_srt(self):
-        if DEBUG : print("in activate_sort")
-        self.srt_bkmrk_sgnl.emit()
-        self.close()
-
-    @pyqtSlot()
     def activate_add(self):
         if DEBUG : print(f"in activate_add, title : {self.pgtitle.text()}")
         self.add_bkmrk_sgnl.emit(self.pgtitle.text())
-        self.close()
-
-    @pyqtSlot()
-    def activate_del(self):
-        if DEBUG : print(f"in activate_delete")
-        self.del_bkmrk_sgnl.emit()
         self.close()
 
     @pyqtSlot()
@@ -179,6 +159,42 @@ class Bookmark_Dialog(QDialog):
         self.pgtitle.setText(bookmark_title)
         self.pgtitle.setCursorPosition(0)
 
+class Bookmark_rem_Dialog(QDialog):
+
+  # signal generated 
+    rem_bkmrk_sgnl = pyqtSignal(list)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.PXLSIZE = PXLSIZE
+
+        self.setWindowTitle("bookmark\n to remove")
+        self.setFixedWidth(PXLSIZE+35)
+
+        self.layout = QVBoxLayout(self)
+        self.remove_btn = QPushButton('Remove')
+        self.remove_btn.setFixedWidth(PXLSIZE)
+        self.layout.addWidget(self.remove_btn)
+        self.setWindowModality(Qt.WindowModality.ApplicationModal)
+
+        self.remove_btn.clicked.connect(self.remove_items)
+
+    def set_listWidget(self, listWidget):
+        if DEBUG : print("in set_listWidget")
+        self.listWidget = listWidget
+        self.layout.addWidget(self.listWidget)
+
+    @pyqtSlot()
+    def remove_items(self):
+        if DEBUG : print("in remove_items")
+        lst = []
+        for item in self.listWidget.selectedItems():
+            lst.append(self.listWidget.row(item))
+        if DEBUG : print(f"list of item's row to remove : {lst}")
+        self.rem_bkmrk_sgnl.emit(lst)
+        self.close()
+
 class BookMarkToolBar(QToolBar):
     '''
     Create a bookmark button in the toolbar. On press of this button, 
@@ -189,53 +205,72 @@ class BookMarkToolBar(QToolBar):
     '''
   # signal generated for a press on a bookmark item in the bookmark (vertical) bar
     bookmark_clicked = pyqtSignal(str)
+    set_url_home = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super(BookMarkToolBar, self).__init__(parent)
 
-        self.actionTriggered.connect(self.onActionTriggered)
+        self.actionTriggered.connect(self.onActionTriggered)        # if self involved jump to onActionTriggered()
         self.bkmrk_list = QListWidget()
         self.bkmrk_list.setSortingEnabled(False)
         self.PXLSIZE = PXLSIZE
-        self.bkmrk_dlg = Bookmark_Dialog(self)
+        self.bkmrk_add_dlg = Bookmark_add_Dialog(self)
+        self.bkmrk_rem_dlg = Bookmark_rem_Dialog(self)
+      # set a menu on a button inside bookmark toolbar (self, this class)
+        mgr_button = QPushButton("manage bookmark")
+        self.addWidget(mgr_button)
+        mgr_menu = QMenu()
+        srt_act = mgr_menu.addAction("sort bookmark")
+        clr_act = mgr_menu.addAction("clear bookmark")
+        # mgr_sub_menu = mgr_menu.addMenu("submenu")
+        rem_act = mgr_menu.addAction("remove")      # open list
+
+        mgr_button.setMenu(mgr_menu)
+        clr_act.triggered.connect(self.clear_bookmark)
+        srt_act.triggered.connect(self.sort_bookmark)
+        rem_act.triggered.connect(self.slct_rem_bkmrk)       # show the listwidget in a window, so an item can be selected and remved 
+
         self.settings = QSettings(Path.home().as_posix() + "/.test_bookmark3/MyApp.ini", QSettings.Format.IniFormat) # avoid using registry
 
-      # signals
-        self.bkmrk_dlg.srt_bkmrk_sgnl.connect(self.sort_bookmark)
-        self.bkmrk_dlg.add_bkmrk_sgnl.connect(self.add_bkmrk)
-        self.bkmrk_dlg.del_bkmrk_sgnl.connect(self.del_bkmrk)
-        self.bkmrk_dlg.home_bkmrk_sgnl.connect(self.home_bkmrk)
+      # external signals handling
+        self.bkmrk_add_dlg.add_bkmrk_sgnl.connect(self.add_bkmrk)
+        self.bkmrk_add_dlg.home_bkmrk_sgnl.connect(self.home_bkmrk)
+        self.bkmrk_rem_dlg.rem_bkmrk_sgnl.connect(self.rem_bkmrk)
 
     def load_settings(self):
         if DEBUG : print("in load_settings")
+        dflt_url = self.settings.value("default_url",[])    # lrp should load here a help file
+        if dflt_url:
+            self.default_url = dflt_url[0]
+        else:
+            self.default_url = "https://www.google.com"
         load_items = self.settings.value("bookmarks", [])
         if DEBUG : print(f"load_items = self.settings.value('bookmarks', []) : {load_items}")
         if not load_items: load_items = []
         for i in range(len(load_items)):
-            print(f'load_items[{i}] : {load_items[i]}')
+            if DEBUG: print(f'load_items[{i}] : {load_items[i]}')
             self.bkmrk_title, self.bkmrk_url = load_items[i][0], load_items[i][1]                           # needed for initial load
             if  DEBUG : print(f"self.bkmrk_title, self.bkmrk_url : {self.bkmrk_title, self.bkmrk_url}")
             self.add_bkmrk(self.bkmrk_title)
 
     def bkmrk_select_action(self, title, url):          # do not modify
         '''
-        Jump here, from MainWindow, on a click on the bookmark icon,
-        the title must be edited to fit in the bookmark tool bar on the side,
-        the result will be acted upon depending on the button pressed (add, remove, sort, set home)
-        The tile will become an item of the bookmark dictionary (key is title, value is url)
+        Jump here, from MainWindow, on a click on the bookmark icon, url and page title is known.
+        the title must be edited to fit in the bookmark toolbar. This will identify the action item
+        in the bookmark toolbar.
         '''
         self.bkmrk_title, self.bkmrk_url = title, url               # needed in initial load
         if DEBUG : print(f"in bkmrk_select_action, title : {self.bkmrk_title}, bkmrk_url : {self.bkmrk_url}")
-        self.bkmrk_dlg.bkmrk_title(self.bkmrk_title)
-        self.cursor_pos = QCursor.pos()    
-        self.bkmrk_dlg.move(self.cursor_pos.x()-4*PXLSIZE,self.cursor_pos.y()+10)
-        if not self.bkmrk_dlg.exec():                                                   # make sure bkmrk_dlg was not closed
+        self.bkmrk_add_dlg.bkmrk_title(self.bkmrk_title)
+        cursor_pos = QCursor.pos() 
+        self.bkmrk_add_dlg.move(cursor_pos.x()-4*PXLSIZE,cursor_pos.y()+10)
+        if not self.bkmrk_add_dlg.exec():                                                   # make sure bkmrk_add_dlg was not closed
             return
 
     def sync_data(self):
         if DEBUG : print ("in sync_data")
         save_items = []
-        print(f"self.bkmrk_list.count() : {self.bkmrk_list.count()}")
+        if DEBUG : print(f"self.bkmrk_list.count() : {self.bkmrk_list.count()}")
         for i in range(self.bkmrk_list.count()):
             it = self.bkmrk_list.item(i)
             if  DEBUG : print(f"it.text() : {it.text()}") 
@@ -243,12 +278,29 @@ class BookMarkToolBar(QToolBar):
             save_items.append((it.text(),action.data()))    
             if  DEBUG : print(f"save_items[{i}] : {save_items[i]}")
         self.settings.setValue("bookmarks", save_items)
+        self.settings.setValue("default_url", [self.default_url])
         self.settings.sync()
 
       # signals handling
+
+    def slct_rem_bkmrk(self):
+        if DEBUG: print("in slct_rem_bkmrk")
+        self.bkmrk_rem_dlg.set_listWidget(self.bkmrk_list)
+        cursor_pos = QCursor.pos()
+        self.bkmrk_rem_dlg.move(cursor_pos.x(),cursor_pos.y()+10)
+        if not self.bkmrk_rem_dlg.exec():                    # make sure bkmrk_rem_dlg was not closed
+            return
+    
+    def rem_bkmrk(self, lst):
+        if DEBUG : print("in rem_bkmrk")
+        for i in range(len(lst)):
+            it = self.bkmrk_list.takeItem(lst[i])
+            action = it.data(Qt.ItemDataRole.UserRole)
+            self.removeAction(action)
+        self.sync_data()
+
     @pyqtSlot()
     def sort_bookmark(self):
-        DEBUG = True
         if DEBUG : print("in sort_bookmark")
       # create a list of label-url, order that list
         srt_lst = []
@@ -258,7 +310,7 @@ class BookMarkToolBar(QToolBar):
                 break
             if DEBUG : print("before : ", it.text(), it.data(Qt.ItemDataRole.UserRole).data())
             srt_lst.append((it.text(), it.data(Qt.ItemDataRole.UserRole).data()))
-      # remove all bkmrk
+      # remove bkmrk
             self.bkmrk_list.takeItem(self.bkmrk_list.row(it))
             action = it.data(Qt.ItemDataRole.UserRole)
             self.removeAction(action)
@@ -274,6 +326,28 @@ class BookMarkToolBar(QToolBar):
             self.bkmrk_list.addItem(item)
             if DEBUG : print("after  : ",ttl, rl)
       # save setting
+        self.sync_data()
+
+    @pyqtSlot()
+    def clear_bookmark(self):
+        '''
+        removes all entries from the bookmark toolbar, resets default/original
+        home url.
+        '''
+        if DEBUG : print("in clear_bookmark")
+        for i in reversed(range(self.bkmrk_list.count())):
+            it = self.bkmrk_list.item(i)
+            if not it: 
+                break
+            if DEBUG : print("deleting : ", it.text(), it.data(Qt.ItemDataRole.UserRole).data())
+      # remove bkmrk
+            self.bkmrk_list.takeItem(self.bkmrk_list.row(it))
+            action = it.data(Qt.ItemDataRole.UserRole)
+            self.removeAction(action)
+      # reset home address
+        self.bkmrk_url = "https://www.google.com"
+        self.home_bkmrk()
+      # save it all
         self.sync_data()
 
     @pyqtSlot(str)
@@ -293,8 +367,8 @@ class BookMarkToolBar(QToolBar):
             self.bkmrk_list.addItem(item)
         self.sync_data()
 
-    @pyqtSlot()
-    def del_bkmrk(self):
+    @pyqtSlot(QListWidget)
+    def del_bkmrk(self, ):
         '''
         remove any label with an identic url compared to the url displayed during 
         the bookmark dialog. The list will be searched in reverse so that removed
@@ -313,6 +387,8 @@ class BookMarkToolBar(QToolBar):
     @pyqtSlot()
     def home_bkmrk(self):
         if DEBUG : print("in home_bkmrk,I 'just' need to develop some")
+        url_home = self.bkmrk_url       # "https://www.google.com"
+        self.set_url_home.emit(url_home)
 
     @pyqtSlot(QAction)
     def onActionTriggered(self, action):
@@ -428,13 +504,17 @@ class MainWindow(QMainWindow):
         self.isbn_btn.clicked.connect(partial(self.set_noosearch_page, "isbn"))
         self.auteurs_btn.clicked.connect(partial(self.set_noosearch_page, "auteurs"))
         self.titre_btn.clicked.connect(partial(self.set_noosearch_page, "titre"))
-        self.bookmarkToolbar.bookmark_clicked.connect(self.goto_this_url)   #  set_from_bookmark)
+        self.bookmarkToolbar.bookmark_clicked.connect(self.goto_this_url)
+        self.bookmarkToolbar.set_url_home.connect(self.set_home_with_current_url)
+
+        self.url_home = "https://www.noosfere.org/livres/noosearch.asp"
 
       # browser
     def set_browser(self):
 
         if DEBUG : print("in set_browser")
         self.browser = QWebEngineView()
+        self.browser.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu) # lrp disable context menu
         self.browser.setUrl(QUrl("http://www.google.com"))
     
       # profile, remeber cookies
@@ -593,7 +673,7 @@ class MainWindow(QMainWindow):
         self.addToolBarBreak()
         self.bookmarkToolbar = BookMarkToolBar()
         self.bookmarkToolbar.setMovable(True)   
-        self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self.bookmarkToolbar)   
+        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.bookmarkToolbar)   
         self.bookmarkToolbar.load_settings()                             # initial fill of home, and remembered URL of interest
   # set status bar
         self.status_bar = QStatusBar()
@@ -645,12 +725,10 @@ class MainWindow(QMainWindow):
         if DEBUG : print("in wake_search_panel")
         self.search_toolbar.show()
 
-#   # bookmark actions
-#     @pyqtSlot(str)
-#     def set_from_bookmark(self, bkmrk_url):
-#         DEBUG = True
-#         if DEBUG : print(f"in set_from_bookmark bkmrk_url : {bkmrk_url}")
-#         self.goto_this_url(url=bkmrk_url)
+  # bookmark actions
+    @pyqtSlot(str)
+    def set_home_with_current_url(self, url_home):
+        self.url_home = url_home
 
   # Navigation actions      
     def goto_this_url(self, url="http://www.google.com"):
@@ -659,7 +737,7 @@ class MainWindow(QMainWindow):
 
     def navigate_home(self):
         if DEBUG : print("in navigate_home")
-        self.browser.setUrl(QUrl("https://www.noosfere.org/livres/noosearch.asp"))
+        self.browser.setUrl(QUrl(self.url_home))
 
     def navigate_to_url(self):                    # Does not receive the Url, activated when url bar is manually changed
         if DEBUG : print("in navigate_to_url")

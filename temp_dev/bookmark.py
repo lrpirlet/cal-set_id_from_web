@@ -122,3 +122,33 @@ if __name__ == '__main__':
     w = MainWindow()
     w.show()
     sys.exit(app.exec())
+
+
+
+#     ################################################################################
+
+# Add right-click functionality to listwidget in PyQt4
+
+# https://stackoverflow.com/questions/31380457/add-right-click-functionality-to-listwidget-in-pyqt4
+
+# # I have come up with a pretty simple way of doing this and works perfectly. In the 
+# # ControlMainWindow class add the following to initialise the Context menu policy as 
+# # CustomeContextMenu where listWidget_extractedmeters will be the name of your QListWidget:
+
+#     self.listWidget_extractedmeters.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+#     self.listWidget_extractedmeters.connect(self.listWidget_extractedmeters,QtCore.SIGNAL("customContextMenuRequested(QPoint)" ), self.listItemRightClicked)
+
+# # Then in the ControlMainwindow class the following functions allow you to add context
+# # menu items and to call a funtion that performs some functionality:
+
+# def listItemRightClicked(self, QPos): 
+#     self.listMenu= QtGui.QMenu()
+#     menu_item = self.listMenu.addAction("Remove Item")
+#     self.connect(menu_item, QtCore.SIGNAL("triggered()"), self.menuItemClicked) 
+#     parentPosition = self.listWidget_extractedmeters.mapToGlobal(QtCore.QPoint(0, 0))        
+#     self.listMenu.move(parentPosition + QPos)
+#     self.listMenu.show() 
+
+# def menuItemClicked(self):
+#     currentItemName=str(self.listWidget_extractedmeters.currentItem().text() )
+#     print(currentItemName)
