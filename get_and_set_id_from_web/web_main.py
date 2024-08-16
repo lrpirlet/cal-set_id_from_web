@@ -4,41 +4,42 @@
 __license__   = 'GPL v3'
 __copyright__ = '2022, Louis Richard Pirlet'
 
-from qt.core import (pyqtSlot, QUrl, QSize, Qt, pyqtSignal, QTimer,
-    QMainWindow, QToolBar, QAction, QLineEdit, QStatusBar, QProgressBar,
-    QMessageBox, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QShortcut, QClipboard, QKeySequence, QIcon)
-
-from qt.webengine import QWebEngineView, QWebEnginePage, QWebEngineProfile
-
-# from PyQt5.QtCore import pyqtSlot, QUrl, QSize, Qt, pyqtSignal, QTimer
-# from PyQt5.QtWidgets import (QMainWindow, QToolBar, QAction, QLineEdit, QStatusBar, QProgressBar,
-#                                 QMessageBox, qApp, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-#                                 QPushButton, QShortcut)
-# from PyQt5.QtGui import QIcon, QKeySequence
-# from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
+# from qt.webengine import QWebEngineView, QWebEnginePage, QWebEngineProfile
 
 # from qt.core import (pyqtProperty, pyqtSignal, pyqtSlot, QAction, QApplication,
 #                 QBrush, QByteArray, QCheckBox, QColor, QColorDialog, QComboBox,
 #                 QCompleter, DateTime, QDialog, QDialogButtonBox, QEasingCurve,
 #                 QEvent, QFont, QFontInfo, QFontMetrics, QFormLayout, QGridLayout,
 #                 QHBoxLayout, QIcon, QInputDialog, QKeySequence, QLabel, QLineEdit,
-#                 QListView, QMainWindow, QMainWindow, QMenu, QMenuBar, QMessageBox,
+#                 QListView, QMainWindow, QMenu, QMenuBar, QSettings, QClipboard,
 #                 QMessageBox, QModelIndex, QObject, QPainter, QPalette, QPixmap,
 #                 QPlainTextEdit, QProgressBar, QPropertyAnimation, QPushButton,
 #                 QShortcut, QSize, QSizePolicy, QSplitter, QStackedWidget, QStatusBar,
 #                 QStyle, QStyleOption, QStylePainter, QSyntaxHighlighter, Qt, QTabBar,
 #                 QTabWidget, QTextBlockFormat, QTextCharFormat, QTextCursor, QTextEdit,
 #                 QTextFormat, QTextListFormat, QTimer, QToolBar, QToolButton, QUrl,
-#                 QVBoxLayout, QWidget
+#                 QVBoxLayout, QWidget, Qt
 # )
+from PyQt6.QtCore import (pyqtSlot, QUrl, QSize, Qt, pyqtSignal, QTimer, QSettings, QEventLoop)
+
+from PyQt6.QtWidgets import(QMainWindow, QToolBar, QLineEdit, QStatusBar, QProgressBar,
+                            QMessageBox, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+                            QPushButton, QDialog, QGridLayout, QFrame, QLineEdit, QMenu,
+                            QListWidget, QListWidgetItem, QVBoxLayout)
+
+from PyQt6.QtGui import (QAction, QShortcut, QKeySequence, QIcon, QFontMetrics, QCursor)
+
+from PyQt6.QtWebEngineWidgets import QWebEngineView
+from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
 
 from calibre.gui2 import Application
-from calibre.constants import cache_dir 
+from calibre.constants import cache_dir
 
 from json import dumps
 from functools import partial
 import tempfile, glob, os, sys, logging
+
+PXLSIZE = 125   # I need this constant in several classes
 
 class StreamToLogger():
     """
@@ -58,12 +59,343 @@ class StreamToLogger():
         for handler in self.logger.handlers:
             handler.flush()
 
+class Bookmark_add_Dialog(QDialog):
+  # signal generated
+    add_bkmrk_sgnl = pyqtSignal(str)
+    home_bkmrk_sgnl = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.PXLSIZE = PXLSIZE
+
+        self.setWindowTitle("Gestion des favoris")
+
+        bkmrk_layout = QVBoxLayout()
+        button_layout = QHBoxLayout()
+        label_layout = QGridLayout()
+
+        add_btn = QPushButton("Add bookmark")
+        add_btn.setDefault(True)
+        home_btn = QPushButton("Set home")
+
+        button_layout.addWidget(add_btn)
+        button_layout.addWidget(home_btn)
+
+        add_btn.pressed.connect(self.activate_add)
+        home_btn.pressed.connect(self.activate_home)
+
+        label1 = QLabel("Page name:")
+        label2 = QLabel("Bookmark name:")
+
+        self.bkmrk = QLabel()
+        self.bkmrk.setFixedWidth(self.PXLSIZE)
+        self.bkmrk.setFrameStyle(QFrame.Shape.Panel | QFrame.Shadow.Sunken)
+
+        self.pgtitle = QLineEdit()
+        self.pgtitle.setFixedWidth(self.PXLSIZE*3)
+        self.pgtitle.setToolTip("Edit this line until the Bookmark name does show on a green background to get a non truncated bookmark name")
+        self.pgtitle.textChanged.connect(self.display_edited_bookmark)
+
+        label_layout.addWidget(label1,       0, 0)
+        label_layout.addWidget(self.pgtitle, 0, 1, 1, 3)
+        label_layout.addWidget(label2,       1, 0)
+        label_layout.addWidget(self.bkmrk,   1, 1)
+        label_layout.setRowMinimumHeight(1, 30)
+
+        bkmrk_layout.addLayout(label_layout)
+        bkmrk_layout.addLayout(button_layout)
+
+        self.setLayout(bkmrk_layout)
+
+    @pyqtSlot(str)
+    def display_edited_bookmark(self, bkmrk):
+        if self.dbg : print(f"in display_edited_bookmark, bookmark = {bkmrk}")
+        fm = QFontMetrics(self.font())
+        bkmrk = fm.elidedText(bkmrk, Qt.TextElideMode.ElideRight, self.PXLSIZE-5)
+        if bkmrk[-1] == "…":
+            self.bkmrk.setStyleSheet("background-color: red")
+        else:
+            self.bkmrk.setStyleSheet("background-color: lightgreen")
+        self.bkmrk.setText(bkmrk)
+
+    @pyqtSlot()
+    def activate_add(self):
+        if self.dbg : print(f"in activate_add, title : {self.pgtitle.text()}")
+        self.add_bkmrk_sgnl.emit(self.pgtitle.text())
+        self.close()
+
+    @pyqtSlot()
+    def activate_home(self):
+        if self.dbg : print("in activate_home")
+        self.home_bkmrk_sgnl.emit()
+        self.close()
+
+    def bkmrk_title(self, bookmark_title):
+        if self.dbg : print("in bkmrk_title")
+        self.bookmark_title = bookmark_title
+        self.pgtitle.setText(bookmark_title)
+        self.pgtitle.setCursorPosition(0)
+
+    def set_debug(self):
+        self.dbg = True
+
+class Bookmark_rem_Dialog(QDialog):
+
+  # signal generated
+    rem_bkmrk_sgnl = pyqtSignal(list)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.PXLSIZE = PXLSIZE
+
+        self.setWindowTitle("bookmark\n to remove")
+        self.setFixedWidth(PXLSIZE+35)
+
+        self.layout = QVBoxLayout(self)
+        self.remove_btn = QPushButton('Remove')
+        self.remove_btn.setFixedWidth(PXLSIZE)
+        self.layout.addWidget(self.remove_btn)
+        self.setWindowModality(Qt.WindowModality.ApplicationModal)
+
+        self.remove_btn.clicked.connect(self.remove_items)
+
+    def set_listWidget(self, listWidget):
+        if self.dbg : print("in set_listWidget")
+        self.listWidget = listWidget
+        self.layout.addWidget(self.listWidget)
+
+    @pyqtSlot()
+    def remove_items(self):
+        if self.dbg : print("in remove_items")
+        lst = []
+        for item in self.listWidget.selectedItems():
+            lst.append(self.listWidget.row(item))
+        if self.dbg : print(f"list of item's row to remove : {lst}")
+        self.rem_bkmrk_sgnl.emit(lst)
+        self.close()
+
+    def set_debug(self):
+        self.dbg = True
+
+class BookMarkToolBar(QToolBar):
+    '''
+    Create a bookmark button in the toolbar. On press of this button,
+    a dialog box will open giving the possibility to sort the bookmarks, to add
+    a bookmark or to remove the matching bookmark.
+    The Bookmark name can be edited from the page title.
+    On click on a bookmark item, the webengine will go to the corresponding url.
+    '''
+  # signal generated for a press on a bookmark item in the bookmark (vertical) bar
+    bookmark_clicked = pyqtSignal(str)
+    set_url_home = pyqtSignal(str)
+
+    def __init__(self, parent=None):
+        super(BookMarkToolBar, self).__init__(parent)
+
+        self.actionTriggered.connect(self.onActionTriggered)        # if self involved jump to onActionTriggered()
+        self.bkmrk_list = QListWidget()
+        self.bkmrk_list.setSortingEnabled(False)
+        self.PXLSIZE = PXLSIZE
+        self.bkmrk_add_dlg = Bookmark_add_Dialog(self)
+        self.bkmrk_rem_dlg = Bookmark_rem_Dialog(self)
+      # set a menu on a button inside bookmark toolbar (self, this class)
+        mgr_button = QPushButton("favoris: gestion")
+        self.addWidget(mgr_button)
+        mgr_menu = QMenu()
+        srt_act = mgr_menu.addAction("sort bookmark")
+        clr_act = mgr_menu.addAction("clear bookmark")
+        # mgr_sub_menu = mgr_menu.addMenu("submenu")
+        rem_act = mgr_menu.addAction("remove")      # open list
+
+        mgr_button.setMenu(mgr_menu)
+        clr_act.triggered.connect(self.clear_bookmark)
+        srt_act.triggered.connect(self.sort_bookmark)
+        rem_act.triggered.connect(self.slct_rem_bkmrk)       # show the listwidget in a window, so an item can be selected and remved
+
+        self.settings = QSettings(os.path.join(cache_dir(), 'getandsetidfromweb_web_main.ini'), QSettings.Format.IniFormat) # avoid using registry
+
+      # external signals handling
+        self.bkmrk_add_dlg.add_bkmrk_sgnl.connect(self.add_bkmrk)
+        self.bkmrk_add_dlg.home_bkmrk_sgnl.connect(self.home_bkmrk)
+        self.bkmrk_rem_dlg.rem_bkmrk_sgnl.connect(self.rem_bkmrk)
+
+    def load_settings(self):
+        if self.dbg : print("in load_settings")
+        dflt_url = self.settings.value("default_url",[])    # lrp should load here a help file
+        if dflt_url:
+            self.default_url = dflt_url[0]
+        else:
+            self.default_url = "https://www.google.com"
+        load_items = self.settings.value("bookmarks", [])
+        # if self.dbg : print(f"load_items = self.settings.value('bookmarks', []) : {load_items}")
+        if not load_items: load_items = []
+        for i in range(len(load_items)):
+            # if self.dbg: print(f'load_items[{i}] : {load_items[i]}')
+            self.bkmrk_title, self.bkmrk_url = load_items[i][0], load_items[i][1]                           # needed for initial load
+            if  self.dbg : print(f"self.bkmrk_title, self.bkmrk_url : {self.bkmrk_title, self.bkmrk_url}")
+            self.add_bkmrk(self.bkmrk_title)
+
+    def bkmrk_select_action(self, title, url):          # do not modify
+        '''
+        Jump here, from MainWindow, on a click on the bookmark icon, url and page title is known.
+        the title must be edited to fit in the bookmark toolbar. This will identify the action item
+        in the bookmark toolbar.
+        '''
+        self.bkmrk_title, self.bkmrk_url = title, url               # needed in initial load
+        if self.dbg : print(f"in bkmrk_select_action, title : {self.bkmrk_title}, bkmrk_url : {self.bkmrk_url}")
+        self.bkmrk_add_dlg.bkmrk_title(self.bkmrk_title)
+        cursor_pos = QCursor.pos()
+        self.bkmrk_add_dlg.move(cursor_pos.x()-4*PXLSIZE,cursor_pos.y()+10)
+        if not self.bkmrk_add_dlg.exec():                                                   # make sure bkmrk_add_dlg was not closed
+            return
+
+    def sync_data(self):
+        if self.dbg : print ("in sync_data")
+        save_items = []
+        # if self.dbg : print(f"self.bkmrk_list.count() : {self.bkmrk_list.count()}")
+        for i in range(self.bkmrk_list.count()):
+            it = self.bkmrk_list.item(i)
+            if  self.dbg : print(f"it.text() : {it.text()}")
+            action = it.data(Qt.ItemDataRole.UserRole)
+            save_items.append((it.text(),action.data()))
+            if  self.dbg : print(f"save_items[{i}] : {save_items[i]}")
+        self.settings.setValue("bookmarks", save_items)
+        self.settings.setValue("default_url", [self.default_url])
+        self.settings.sync()
+
+  # signals handling
+    def slct_rem_bkmrk(self):
+        if self.dbg: print("in slct_rem_bkmrk")
+        self.bkmrk_rem_dlg.set_listWidget(self.bkmrk_list)
+        cursor_pos = QCursor.pos()
+        self.bkmrk_rem_dlg.move(cursor_pos.x(),cursor_pos.y()+10)
+        if not self.bkmrk_rem_dlg.exec():                    # make sure bkmrk_rem_dlg was not closed
+            return
+
+    def rem_bkmrk(self, lst):
+        if self.dbg : print("in rem_bkmrk")
+        for i in range(len(lst)):
+            it = self.bkmrk_list.takeItem(lst[i])
+            action = it.data(Qt.ItemDataRole.UserRole)
+            self.removeAction(action)
+        self.sync_data()
+
+    @pyqtSlot()
+    def sort_bookmark(self):
+        if self.dbg : print("in sort_bookmark")
+      # create a list of label-url, order that list
+        srt_lst = []
+        for i in reversed(range(self.bkmrk_list.count())):
+            it = self.bkmrk_list.item(i)
+            if not it:
+                break
+            # if self.dbg : print("before : ", it.text(), it.data(Qt.ItemDataRole.UserRole).data())
+            srt_lst.append((it.text(), it.data(Qt.ItemDataRole.UserRole).data()))
+      # remove bkmrk
+            self.bkmrk_list.takeItem(self.bkmrk_list.row(it))
+            action = it.data(Qt.ItemDataRole.UserRole)
+            self.removeAction(action)
+      # order the list
+        srt_lst.sort(key = lambda x: x[0].lower())
+      # add all from ordered list
+        for i in range(len(srt_lst)):
+            ttl, rl = srt_lst[i]
+            action = self.addAction(ttl)
+            action.setData(rl)
+            item = QListWidgetItem(ttl)
+            item.setData(Qt.ItemDataRole.UserRole, action)
+            self.bkmrk_list.addItem(item)
+            # if self.dbg : print("after  : ",ttl, rl)
+      # save setting
+        self.sync_data()
+
+    @pyqtSlot()
+    def clear_bookmark(self):
+        '''
+        removes all entries from the bookmark toolbar, resets default/original
+        home url.
+        '''
+        if self.dbg : print("in clear_bookmark")
+        for i in reversed(range(self.bkmrk_list.count())):
+            it = self.bkmrk_list.item(i)
+            if not it:
+                break
+            # if self.dbg : print("deleting : ", it.text(), it.data(Qt.ItemDataRole.UserRole).data())
+      # remove bkmrk
+            self.bkmrk_list.takeItem(self.bkmrk_list.row(it))
+            action = it.data(Qt.ItemDataRole.UserRole)
+            self.removeAction(action)
+      # reset home address
+        self.bkmrk_url = "https://www.google.com"
+        self.home_bkmrk()
+      # save it all
+        self.sync_data()
+
+    @pyqtSlot(str)
+    def add_bkmrk(self, bkmrk_title):
+        '''
+        add an entry in the bookmark, with the label returned from the bookmark dialog
+        except is there is an entry with the same label
+        '''
+        if self.dbg : print(f"in add_bkmrk, bkmrk_title : {bkmrk_title}")
+        fm = QFontMetrics(self.font())
+        bkmrk_title = fm.elidedText(bkmrk_title, Qt.TextElideMode.ElideRight, self.PXLSIZE)
+        if not self.bkmrk_list.findItems(bkmrk_title, Qt.MatchFlag.MatchExactly):
+            action=self.addAction(bkmrk_title)
+            action.setData(self.bkmrk_url)
+            item = QListWidgetItem(bkmrk_title)
+            item.setData(Qt.ItemDataRole.UserRole, action)
+            self.bkmrk_list.addItem(item)
+        self.sync_data()
+
+    @pyqtSlot(QListWidget)
+    def del_bkmrk(self, ):
+        '''
+        remove any label with an identic url compared to the url displayed during
+        the bookmark dialog. The list will be searched in reverse so that removed
+        bookmark in the list will not change the index of possible next match.
+        '''
+        if self.dbg : print(f"in del_bkmrk")
+        for i in reversed(range(self.bkmrk_list.count())):
+            it = self.bkmrk_list.item(i)
+            if self.bkmrk_url == it.data(Qt.ItemDataRole.UserRole).data():
+                action = it.data(Qt.ItemDataRole.UserRole)
+                self.removeAction(action)
+                self.bkmrk_list.takeItem(self.bkmrk_list.row(it))
+        self.sync_data()
+
+    @pyqtSlot()
+    def home_bkmrk(self):
+        if self.dbg : print("in home_bkmrk,I 'just' need to develop some")
+        url_home = self.bkmrk_url       # "https://www.google.com"
+        self.set_url_home.emit(url_home)
+
+    @pyqtSlot(QAction)
+    def onActionTriggered(self, action):
+        if self.dbg : print("in onActionTriggered")
+        url = action.data()
+        # if self.dbg : print(f"action.data() : {action.data()} = url : {url}")
+        self.bookmark_clicked.emit(url)
+
+    def set_debug(self):
+        self.dbg = True
+        self.bkmrk_add_dlg.set_debug()
+        self.bkmrk_rem_dlg.set_debug()
+
 class Search_Panel(QWidget):
+    '''
+    A dynamic search panel. Shows up on signal "searched" when search is activated (via button or <ctrl f>).
+    Disapear on signal "closesrch" as soon as not relevant anymore (change url, button done, esc key).
+    No automatic information is passed in search line, manual cut and paste may be used to populate.
+    '''
+  # signal generated for a press on a bookmark item in the bookmark (vertical) bar
     searched = pyqtSignal(str, QWebEnginePage.FindFlag)
-    closed = pyqtSignal()
+    closesrch = pyqtSignal()
 
     def __init__(self,parent=None):
-        super().__init__(parent)
+        super(Search_Panel,self).__init__(parent)
 
         next_btn = QPushButton('Suivant')
         next_btn.setToolTip("Ce bouton recherche la prochaine occurrence dans la page")
@@ -77,7 +409,7 @@ class Search_Panel(QWidget):
 
         done_btn = QPushButton("Terminé")
         done_btn.setToolTip("Ce bouton ferme la barre de recherche")
-        done_btn.clicked.connect(self.closed)
+        done_btn.clicked.connect(self.closesrch)
         if isinstance(done_btn, QPushButton): done_btn.clicked.connect(self.setFocus)
 
         self.srch_dsp = QLineEdit()
@@ -85,7 +417,7 @@ class Search_Panel(QWidget):
         self.setFocusProxy(self.srch_dsp)
         self.srch_dsp.textChanged.connect(self.update_searching)
         self.srch_dsp.returnPressed.connect(self.update_searching)
-        self.closed.connect(self.srch_dsp.clear)
+        self.closesrch.connect(self.srch_dsp.clear)
 
         self.srch_lt = QHBoxLayout(self)
         self.srch_lt.addWidget(self.srch_dsp)
@@ -95,30 +427,36 @@ class Search_Panel(QWidget):
 
         QShortcut(QKeySequence.StandardKey.FindNext, self, activated=next_btn.animateClick)
         QShortcut(QKeySequence.StandardKey.FindPrevious, self, activated=prev_btn.animateClick)
-        QShortcut(QKeySequence(Qt.Key_Escape), self.srch_dsp, activated=self.closed)
+        QShortcut(QKeySequence(Qt.Key.Key_Escape), self.srch_dsp, activated=self.closesrch)
 
     @pyqtSlot()
     def on_preview_find(self):
+        if self.dbg: print("in class Search_Panel : on_preview_find")
         self.update_searching(QWebEnginePage.FindFlag.FindBackward)
 
     @pyqtSlot()
     def update_searching(self, direction=QWebEnginePage.FindFlag(0)):
+        if self.dbg: print("in class Search_Panel : update_searching")
         flag = direction
         self.searched.emit(self.srch_dsp.text(), flag)
 
     def showEvent(self, event):
-        super().showEvent(event)
+        if self.dbg: print("in class Search_Panel : showEvent")
+        super(Search_Panel, self).showEvent(event)
         self.setFocus()
+
+    def set_debug(self):
+        self.dbg = True
 
 class MainWindow(QMainWindow):
     """
     this process, running in the calibre environment, is detached from calibre program
-    It does receive data from set_id_from_web, processes it, then communicates back the 
-    result and dies. Data received is title, authors, ISDN and DEBUG; data reurned is one or more IDs
-    related to the book and/or one or more fake unique title ?using actual date/time?, 
-    associated with an id so that a new book may be created. (example: missing book in a series) 
+    It does receive data from set_id_from_web, processes it, then communicates back the
+    result and dies.
+    Data received is title, authors, ISDN and DEBUG; data reurned is one or more IDs
+    related to the book
     In fact this is a very basic WEB browser to report the selected_url of the choosen book.
-    To debug web_main do set self.dbg = True
+    To debug web_main do execute calibre in debug mode (calibre-debug --gui)
     """
 
     def __init__(self, data):
@@ -165,7 +503,7 @@ class MainWindow(QMainWindow):
 
 
       # make all that visible... I want this window on top ready to work with
-        self.setWindowFlags(Qt.WindowStaysOnTopHint)
+        self.setWindowFlags(Qt.WindowType.WindowStaysOnTopHint)
         self.show()
         self.activateWindow()
 
@@ -179,24 +517,31 @@ class MainWindow(QMainWindow):
         self.isbn_btn.clicked.connect(partial(self.set_noosearch_page, "isbn"))
         self.auteurs_btn.clicked.connect(partial(self.set_noosearch_page, "auteurs"))
         self.titre_btn.clicked.connect(partial(self.set_noosearch_page, "titre"))
+        self.bookmarkToolbar.bookmark_clicked.connect(self.goto_this_url)
+        self.bookmarkToolbar.set_url_home.connect(self.set_home_with_current_url)
+
+        self.url_home = "https://www.noosfere.org/livres/noosearch.asp"
 
       # browser
     def set_browser(self):
         print(f"in set_browser, value of self.dbg : {self.dbg}\n")      # entry point for each iteration of the browser
         self.browser = QWebEngineView()
         self.browser.setUrl(QUrl("http://www.google.com"))
-    
-      # set profile to enable remembering cookies... 
+
+      # set profile to enable remembering cookies...
     def set_profile(self):
         if self.dbg: print("in set_profile")
         profile = QWebEngineProfile("savecookies", self.browser)
         browser_storage_folder = os.path.join(cache_dir(), 'getandsetidfromweb')
-        print(f"browser_storagefolder : {browser_storage_folder}")
-        profile.setHttpCacheType(QWebEngineProfile.HttpCacheType.MemoryHttpCache)
+
+        print(f"browser_storagefolder : {browser_storage_folder}")          # browser_storagefolder : C:\Users\lrpir\AppData\Local\calibre-cache\getandsetidfromweb
+        profile.setPersistentCookiesPolicy(QWebEngineProfile.PersistentCookiesPolicy.ForcePersistentCookies)
         profile.setPersistentStoragePath(browser_storage_folder)
+        profile.setHttpCacheType(QWebEngineProfile.HttpCacheType.MemoryHttpCache)
+
         self.webpage = QWebEnginePage(profile, self.browser)
         self.browser.setPage(self.webpage)
-        
+
     # def set_it_secure(self):    # disable javascript to reduce malware surface grip
     # Not a good idea really, to suppress Javascript capabilities remove too much...
     # In fact default seems most appropiate.
@@ -249,12 +594,13 @@ class MainWindow(QMainWindow):
     def set_search_bar(self):
         if self.dbg: print("in set_search_bar")
         self.search_pnl = Search_Panel()
+        if self.dbg: self.search_pnl.set_debug()
         self.search_toolbar = QToolBar()
         self.search_toolbar.addWidget(self.search_pnl)
         self.addToolBar(Qt.BottomToolBarArea, self.search_toolbar)
         self.search_toolbar.hide()
         self.search_pnl.searched.connect(self.on_searched)
-        self.search_pnl.closed.connect(self.search_toolbar.hide)
+        self.search_pnl.closesrch.connect(self.search_toolbar.hide)
 
     def join_all_boxes(self):                   # put all that together, center, size and make it central widget
         if self.dbg: print("in join_all_boxes")
@@ -316,6 +662,12 @@ class MainWindow(QMainWindow):
                                 # You can even enter any address you like, but as always, AT YOUR OWN RISK... No malware filtering in this browser.
         nav_tb.addWidget(self.urlbox)
 
+        favorite_btn = QAction(get_icons("blue_icon/star.png"), "bookmark", self)
+        favorite_btn.setToolTip("Défini le signet des sites favoris, défini le site maison")
+        favorite_btn.triggered.connect(self.addFavoriteClicked)
+        nav_tb.addAction(favorite_btn)
+
+        nav_tb.addSeparator()
         abort_btn = QAction(get_icons('blue_icon/abort.png'), "Abort", self)
         abort_btn.setToolTip("On arrête, on oublie, on ne change rien au livre... au suivant")
                               # Stop everything, forget everything and change nothing... proceed to next book
@@ -332,20 +684,26 @@ class MainWindow(QMainWindow):
 
         nav_tb.addSeparator()
 
-        exit_btn = QAction(get_icons('blue_icon/exit.png'), "Select and exit", self)
-        exit_btn.setToolTip("On sélectionne cet URL pour extraction de l'id... livre suivant")
+        exit_btn = QAction(get_icons('blue_icon/exit.png'), "Done and exit", self)
+        exit_btn.setToolTip("On a fini de sélectionner les id... livre suivant")
                              # select this URL for extraction of the id, continue
-        exit_btn.triggered.connect(self.select_and_exit)
+        exit_btn.triggered.connect(self.done_do_exit)
         nav_tb.addAction(exit_btn)
-
-      # set status bar
+  # bookmark bar (need a def)
+        self.addToolBarBreak()
+        self.bookmarkToolbar = BookMarkToolBar()
+        self.bookmarkToolbar.setMovable(True)
+        if self.dbg : self.bookmarkToolbar.set_debug()
+        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.bookmarkToolbar)
+        self.bookmarkToolbar.load_settings()                             # initial fill of home, and remembered URL of interest
+  # set status bar
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
-      # Create page loading progress bar that is displayed in the status bar.
+  # Create page loading progress bar that is displayed in the status bar.
         self.msg_label = QLabel()
         self.page_load_label = QLabel()
         self.page_load_pb = QProgressBar()
-      # Set up widgets on the statusbar
+  # Set up widgets on the statusbar
         self.statusBar().addPermanentWidget(self.msg_label, stretch=36)
         self.statusBar().addPermanentWidget(self.page_load_label, stretch=14)
         self.statusBar().addPermanentWidget(self.page_load_pb, stretch=50)
@@ -389,14 +747,19 @@ class MainWindow(QMainWindow):
         if self.dbg: print("in wake_search_panel")
         self.search_toolbar.show()
 
+  # bookmark actions
+    @pyqtSlot(str)
+    def set_home_with_current_url(self, url_home):
+        self.url_home = url_home
+
   # Navigation actions
-    def initial_url(self, url="http://www.google.com"):
-        if self.dbg: print(f"in initial_url url : {url}")
+    def goto_this_url(self, url="http://www.google.com"):
+        if self.dbg: print(f"in goto_this_url url : {url}")
         self.browser.setUrl(QUrl(url))
 
     def navigate_home(self):
         if self.dbg: print("in navigate_home")
-        self.browser.setUrl(QUrl("https://www.google.com"))      # home for the 'get and set id from web' browser 
+        self.browser.setUrl(QUrl("https://www.google.com"))      # home for the 'get and set id from web' browser
 
     def navigate_to_url(self):                    # Does not receive the Url, activated when url bar is manually changed
         if self.dbg: print("in navigate_to_url")
@@ -413,7 +776,7 @@ class MainWindow(QMainWindow):
     def loading_title(self):
         if self.dbg: print("in loading_title")
       # anytime we change page we come here... let's clear and hide the search panel
-        self.search_pnl.closed.emit()           # by sending a close search panel signal
+        self.search_pnl.closesrch.emit()           # by sending a close search panel signal
       # before doubling indication that we load a page in the title
         title="En téléchargement de l'url"
         self.setWindowTitle(title)
@@ -446,31 +809,40 @@ class MainWindow(QMainWindow):
             for i in range(len(returned_url)):
                 report_tpf.writelines(returned_url[i] + "\n")
 
-    def select_an_id(self):                    
-      # build a list of URL that will be converted to ID 
+    def select_an_id(self):
+      # build a list of URL that will be converted to ID
         if self.dbg: print("in select_an_id")
         self.selected_url.append(self.urlbox.text())            # add url displayed in urlbox
         if self.selected_url:
             print(f'self.selected_url : {self.selected_url}')
 
-    def select_and_exit(self):                  
-      # terminate the list with the present URL and exit
-        if self.dbg: print("in select_and_exit")
-        self.selected_url.append(self.urlbox.text())            # get url displayed in urlbox
+  # Bookmark actions
+    def addFavoriteClicked(self):
+        loop = QEventLoop()
+        def callback(resp):
+            setattr(self, "title", resp)
+            loop.quit()
+        self.browser.page().runJavaScript("(function() { return document.title;})();", callback)
+        chsn_url = self.urlbox.text()
+        loop.exec()
+        self.bookmarkToolbar.bkmrk_select_action(getattr(self, "title"), chsn_url)
+
+  # exit actions
+    def done_do_exit(self):
+        if self.dbg: print("in done_do_exit")
         if self.selected_url:
             for i in range(len(self.selected_url)):
                 print(f'self.selected_url[{i}] : {self.selected_url[i]}')
             self.report_returned_url(self.selected_url)
-        Application.instance().exit()               # exit application...
+        self.lets_go()
 
     def abort_book(self):                           # we want to NOT change the book and proceed to the next one
         if self.dbg: print("in abort_book")
         reply = QMessageBox.question(self, 'Certain', "Oublier ce livre et passer au suivant", QMessageBox.No | QMessageBox.Yes, QMessageBox.Yes)
         if reply == QMessageBox.Yes:
             print("WebEngineView was aborted for this book: aborted")
-            self.report_returned_url("aborted by user")
-            Application.instance().exit()           # exit application...
-
+            self.report_returned_url(["aborted by user"])
+            self.lets_go()
 
     def closeEvent(self, event):                    # abort hit window exit "X" button we stop processing this and all following books
         print(f"in closeEvent event : {event}")
@@ -478,7 +850,7 @@ class MainWindow(QMainWindow):
         if reply == QMessageBox.Yes:
             event.accept()
             print("WebEngineView was closed: killed")
-            self.report_returned_url("killed by user")
+            self.report_returned_url(["killed by user"])
             self.webpage.deleteLater()
             super().closeEvent(event)
         else:
@@ -487,12 +859,15 @@ class MainWindow(QMainWindow):
     def chk_for_shutdown(self):                     # presence of such file means that calibre shutdown
         if glob.glob(os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_terminate-cal-qweb*")):
             print("Calibre shutdown WebEngineView was closed: killed")
-            self.report_returned_url("killed on shutdown")       # report main calibre shutdown
-            Application.instance().exit()           # exit application...
+            self.report_returned_url(["killed on calibre shutdown"])       # report main calibre shutdown
+            self.lets_go()
+
+    def lets_go(self):
+        Application.instance().exit()           # exit application...
 
 def main(data):
 
-    # create a temp file... while it exists launcher program will wait... 
+    # create a temp file... while it exists launcher program will wait...
     # this file will disappear with the process
     sync_tpf=tempfile.NamedTemporaryFile(prefix="GetAndSetIdFromWeb_sync-cal-qweb")
 
@@ -502,7 +877,7 @@ def main(data):
     # Start QWebEngineView and associated widgets
     app = Application([])
     window = MainWindow(data)
-    window.initial_url(url)     # supposed to be a valid page, fixed by launcher program
+    window.goto_this_url(url)     # supposed to be a valid page, fixed by launcher program
     app.exec()
 
     # signal launcher program that we are finished

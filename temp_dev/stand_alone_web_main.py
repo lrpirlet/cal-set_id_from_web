@@ -230,7 +230,7 @@ class BookMarkToolBar(QToolBar):
         srt_act.triggered.connect(self.sort_bookmark)
         rem_act.triggered.connect(self.slct_rem_bkmrk)       # show the listwidget in a window, so an item can be selected and remved 
 
-        self.settings = QSettings(Path.home().as_posix() + "/.test_bookmark3/MyApp.ini", QSettings.Format.IniFormat) # avoid using registry
+        self.settings = QSettings(Path.home().as_posix() + "/.test_bookmark3/MyApp.ini", QSettings.Format.IniFormat) # avoid using registry #        browser_storage_folder = os.path.join(cache_dir(), 'getandsetidfromweb')
 
       # external signals handling
         self.bkmrk_add_dlg.add_bkmrk_sgnl.connect(self.add_bkmrk)

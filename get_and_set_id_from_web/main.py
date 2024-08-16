@@ -160,14 +160,14 @@ class InterfacePlugin(InterfaceAction):
 
     def handle_shutdown(self):
         '''
-        It is possible to kill (main) calibre while the (get_and_set_id_from_web) web_browser 
+        It is possible to kill (main) calibre while the (get_and_set_id_from_web) web_browser
         detached process is still running. If a book is selected, then probability to hang (main) calibre
         is very high, preventing to restart calibre.
         A process named "The main calibre program" is still running...
         The workaroundis to kill this process or to reboot...
 
         To avoid this situation, A signal named "shutdown_started" was implemented so that something
-        like 2 seconds are available to the (get_and_set_id_from_web) web_browser detached process 
+        like 2 seconds are available to the (get_and_set_id_from_web) web_browser detached process
         to shutdown cleanly.
 
         The handle_shutdown(), triggered by the signal, do create a temp file that tells
@@ -180,9 +180,11 @@ class InterfacePlugin(InterfaceAction):
         if DEBUG : prints("in handle_shutdown()")
         self.do_shutdown = True
         if DEBUG : prints("self.do_shutdown = True")
-        terminate_tpf=tempfile.NamedTemporaryFile(prefix="GetAndSetIdFromWeb_terminate-cal-qweb", delete=False)
-        terminate_tpf.close
-        if DEBUG : prints("tmp file GetAndSetIdFromWeb_terminate-cal-qweb created")
+        # if sync file is present, web_main detached process is still running.. send him a flag to kill itself 
+        if (glob.glob(os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_sync-cal-qweb*"))):
+            terminate_tpf=tempfile.NamedTemporaryFile(prefix="GetAndSetIdFromWeb_terminate-cal-qweb", delete=False)
+            terminate_tpf.close
+            if DEBUG : prints("tmp file GetAndSetIdFromWeb_terminate-cal-qweb created")
 
     def id_frm_url(self, url):
         '''
@@ -226,7 +228,7 @@ class InterfacePlugin(InterfaceAction):
       # do the job for one book
       # gt_st_id_frm_wb_id_recu is true if metadata was updated, false if web_returned no gt_st_id_frm_wb_id
         nbr_ok = 0
-        set_ok = set()
+        set_ok = set()      # will get a number associated with the selected line
         for book_id in ids:
           # if main calibre does shutdown, stop processing any more book_id
             if not self.do_shutdown:
@@ -304,13 +306,13 @@ class InterfacePlugin(InterfaceAction):
             loop.exec_()
       # unless shutdown_started signal asserted
         if not self.do_shutdown:
-          # sync file is gone, meaning QWebEngineView process is closed so, we can collect the result, bypass if shutdown_started
+          # sync file is gone, meaning either QWebEngineView process is closed so, we can collect the result, bypass if shutdown_started
+          # OR web_main did crash (examine GetAndSetIdFromWeb.log in system temp folder)
             with open(os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_report_url"), "r", encoding="utf_8") as tpf:
-                # returned_url = tpf.read()
                 returned_url = [line.rstrip('\n') for line in tpf]
-            if DEBUG: # prints("returned_url", returned_url)
+            if DEBUG:
                 for i in range(len(returned_url)):
-                    prints("returned_url", returned_url)
+                    prints(f"returned_url{i} : {returned_url[i]}")
 
             if returned_url:
                 if "aborted" in returned_url:
@@ -323,12 +325,12 @@ class InterfacePlugin(InterfaceAction):
                     returned_id=[]  #id_name, gt_st_id_frm_wb_id
                     for i in range(len(returned_url)):
                         rtnid=self.id_frm_url(returned_url[i])
-                        if rtnid : 
+                        if rtnid :
                             returned_id.append(rtnid)
                     if not returned_id:
                         prints('no id could be extracted from url, no change will take place...')
                         return (False, True)                             # gt_st_id_frm_wb_id NOT received, more book
-            
+
             for key in mi.custom_field_keys():
                 display_name, val, oldval, fm = mi.format_field_extended(key)
                 if self.coll_srl_name == key : cstm_coll_srl_fm=fm
@@ -346,7 +348,7 @@ class InterfacePlugin(InterfaceAction):
             if cstm_collection_fm:
                 cstm_collection_fm["#value#"] = ""
                 mi.set_user_metadata(self.collection_name, cstm_collection_fm)
-                    
+
         if self.do_shutdown:
             return(False,False)                             # shutdown_started, do not try to change db
         else:      # commit the change, force reset of the above fields, leave the others alone
