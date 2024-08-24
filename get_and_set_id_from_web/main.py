@@ -4,8 +4,8 @@
 __license__   = 'GPL v3'
 __copyright__ = '2021, Louis Richard Pirlet'
 
-from pickle import FALSE
-from typing import Collection
+# from pickle import FALSE
+# from typing import Collection
 from calibre import prints
 from calibre.constants import cache_dir, DEBUG
 from calibre.gui2 import open_url, error_dialog, info_dialog
@@ -73,17 +73,18 @@ def create_menu_action_unique(ia, parent_menu, menu_text, image=None, tooltip=No
         if is_checked:
             ac.setChecked(True)
     return ac
+
 class InterfacePlugin(InterfaceAction):
 
     name = 'get and set id from web'
     action_spec = ("get and set id from web", None,
-            "lance un webengine to set the ID manually", None)
+            "run a webengine to set one or more ID manually", None)
     popup_type = QToolButton.InstantPopup
     action_add_menu = True
     action_type = 'current'
     current_instance = None
 
-    do_shutdown = False                 # assume main calibre does NOT shutdown
+    do_shutdown = False                 # assume main calibre is NOT in   shutdown
 
   # remove previous log files for web_main process in the temp dir
     with contextlib.suppress(FileNotFoundError): os.remove(os.path.join(tempfile.gettempdir(), 'GetAndSetIdFromWeb.log'))
@@ -126,19 +127,19 @@ class InterfacePlugin(InterfaceAction):
     def build_menus(self):
         self.menu = QMenu(self.gui)
         self.menu.clear()
-        create_menu_action_unique(self, self.menu, _('Efface les métadonnées en surplus'), 'blue_icon/wipe_it.png',
-                                  triggered=self.wipe_selected_metadata)
-        self.menu.addSeparator()
+        # create_menu_action_unique(self, self.menu, _('Efface les métadonnées en surplus'), 'blue_icon/wipe_it.png',
+        #                           triggered=self.wipe_selected_metadata)
+        # self.menu.addSeparator()
 
         create_menu_action_unique(self, self.menu, _('Navigateur Web pour le choix du volume'), 'blue_icon/choice.png',
                                   triggered=self.run_web_main)
         self.menu.addSeparator()
 
-        create_menu_action_unique(self, self.menu, _("Distribue l'information éditeur"), 'blue_icon/eclate.png',
+        create_menu_action_unique(self, self.menu, _("Distribue l'information éditeur pour noosfere"), 'blue_icon/eclate.png',
                                   triggered=self.unscramble_publisher)
         self.menu.addSeparator()
 
-        create_menu_action_unique(self, self.menu, _("Personnalise l'extension")+'...', 'blue_icon/config.png',
+        create_menu_action_unique(self, self.menu, _("crée et configure les colonnes personnalisées (noosfere) ")+'...', 'blue_icon/config.png',
                                   triggered=self.set_configuration)
         self.menu.addSeparator()
 
@@ -211,7 +212,7 @@ class InterfacePlugin(InterfaceAction):
         '''
         For the selected books:
         wipe metadata, launch a web-browser to select the desired volumes,
-        set the gt_st_id_frm_wb_id, remove the ISBN (?fire a metadata download?)
+        set the gt_st_id_frm_wb_id, (?fire a metadata download?)
         '''
         if DEBUG: prints("in run_web_main")
 
@@ -247,7 +248,7 @@ class InterfacePlugin(InterfaceAction):
       # tell user about what has been done...sorry, NOT if main calibre is closed...
         if not self.do_shutdown:
             if DEBUG: prints('gt_st_id_frm_wb_id is recorded, metadata is prepared for {} book(s) out of {}'.format(nbr_ok, len(ids)))
-            info_dialog(self.gui, 'gt_st_id_frm_wb_id: enregistré',
+            info_dialog(self.gui, 'get and set id from web: id(s) enregistré(s)',
                 'Les métadonnées ont été préparées pour {} livre(s) sur {}'.format(nbr_ok, len(ids)),
                 show=True)
           # new_api does not know anything about marked books, so we use the full db object
@@ -264,7 +265,7 @@ class InterfacePlugin(InterfaceAction):
         '''
         if DEBUG: prints("in run_one_web_main")
 
-      # check for presence of needed column
+      # check for presence of needed column (needed for noosfere only)
         if not self.test_for_column():
             return
 
@@ -287,9 +288,8 @@ class InterfacePlugin(InterfaceAction):
         titre = mi.title
         data = [url, isbn, auteurs, titre, DEBUG]
 
-      # unless shutdown_started signal asserted
+      # unless shutdown_started signal asserted Launch a separate process to view the URL in WebEngine
         if not self.do_shutdown:
-          # Launch a separate process to view the URL in WebEngine
             self.gui.job_manager.launch_gui_app('webengine-dialog', kwargs={'module':'calibre_plugins.get_and_set_id_from_web.web_main', 'data':data})
             if DEBUG: prints("webengine-dialog process submitted")          # WARNING: "webengine-dialog" is defined in calibre\src\calibre\utils\ipc\worker.py ...DO NOT CHANGE...
       # wait for web_main.py to settle and create a temp file to synchronize QWebEngineView with calibre...
@@ -355,71 +355,69 @@ class InterfacePlugin(InterfaceAction):
             db.set_metadata(book_id, mi, force_changes=True)
             return (True, True)                                 # gt_st_id_frm_wb_id received, more book
 
-    def wipe_selected_metadata(self):
-        '''
-        For all selected book
-        Deletes publisher, tags, series, rating, self.coll_srl_name (#coll_srl),
-        self.collection_name (#collection), and any ID except ISBN. All other fields are supposed
-        to be overwritten when new metadata is downloaded.
-        '''
-        if DEBUG: prints("in wipe_selected_metadata")
+    # def wipe_selected_metadata(self):
+    #     '''
+    #     For all selected book
+    #     Deletes publisher, tags, series, rating, self.coll_srl_name (#coll_srl),
+    #     self.collection_name (#collection). All other fields are supposed
+    #     to be overwritten when new metadata is downloaded.
+    #     '''
+    #     if DEBUG: prints("in wipe_selected_metadata")
 
-      # check for presence of needed column
-        if not self.test_for_column():
-            return
+    #   # check for presence of needed column
+    #     if not self.test_for_column():
+    #         return
 
-        # Get currently selected books
-        rows = self.gui.library_view.selectionModel().selectedRows()
-        if not rows or len(rows) == 0:
-            return error_dialog(self.gui, 'Pas de métadonnées affectées',
-                             'Aucun livre sélectionné', show=True)
+    #     # Get currently selected books
+    #     rows = self.gui.library_view.selectionModel().selectedRows()
+    #     if not rows or len(rows) == 0:
+    #         return error_dialog(self.gui, 'Pas de métadonnées affectées',
+    #                          'Aucun livre sélectionné', show=True)
 
-        # Map the rows to book ids
-        ids = list(map(self.gui.library_view.model().id, rows))
-        if DEBUG : prints("ids : ", ids)
-        db = self.gui.current_db.new_api
+    #     # Map the rows to book ids
+    #     ids = list(map(self.gui.library_view.model().id, rows))
+    #     if DEBUG : prints("ids : ", ids)
+    #     db = self.gui.current_db.new_api
 
-        for book_id in ids:
-            # Get the current metadata for this book from the db (not any info about cover)
-            mi = db.get_metadata(book_id, get_cover=False, cover_as_data=False)
-            # find custom field of interest
-            for key in mi.custom_field_keys():
-                display_name, val, oldval, fm = mi.format_field_extended(key)
-                if self.coll_srl_name == key :
-                    cstm_coll_srl_fm=fm
-                if self.collection_name == key :
-                    cstm_collection_fm=fm
+    #     for book_id in ids:
+    #         # Get the current metadata for this book from the db (not any info about cover)
+    #         mi = db.get_metadata(book_id, get_cover=False, cover_as_data=False)
+    #         # find custom field of interest
+    #         for key in mi.custom_field_keys():
+    #             display_name, val, oldval, fm = mi.format_field_extended(key)
+    #             if self.coll_srl_name == key :
+    #                 cstm_coll_srl_fm=fm
+    #             if self.collection_name == key :
+    #                 cstm_collection_fm=fm
 
-            # reset the metadata fields that need to be: publisher, self.collection_name (#collection),
-            # self.coll_srl_name (#coll_srl), series, language, pubdate, identifier
-            # leaving those we want to keep (isbn, authors, title) and those we know will be replaced or
-            # augmented (comments, rating, tag, whatever custom columns...)
-            mi.publisher=""
-            mi.series=""
-            mi.language=""
-            mi.pubdate=UNDEFINED_DATE
-            mi.set_identifier('gt_st_id_frm_wb_id', "")
-            if cstm_coll_srl_fm:
-                cstm_coll_srl_fm["#value#"] = ""
-                mi.set_user_metadata(self.coll_srl_name, cstm_coll_srl_fm)
-            if cstm_collection_fm:
-                cstm_collection_fm["#value#"] = ""
-                mi.set_user_metadata(self.collection_name, cstm_collection_fm)
-            # commit changes
-            db.set_metadata(book_id, mi, force_changes=True)
+    #         # reset the metadata fields that need to be: publisher, self.collection_name (#collection),
+    #         # self.coll_srl_name (#coll_srl), series, language, pubdate, identifier
+    #         # leaving those we want to keep (isbn, authors, title) and those we know will be replaced or
+    #         # augmented (comments, rating, tag, whatever custom columns...)
+    #         mi.publisher=""
+    #         mi.series=""
+    #         mi.language=""
+    #         mi.pubdate=UNDEFINED_DATE
+    #         if cstm_coll_srl_fm:
+    #             cstm_coll_srl_fm["#value#"] = ""
+    #             mi.set_user_metadata(self.coll_srl_name, cstm_coll_srl_fm)
+    #         if cstm_collection_fm:
+    #             cstm_collection_fm["#value#"] = ""
+    #             mi.set_user_metadata(self.collection_name, cstm_collection_fm)
+    #         # commit changes
+    #         db.set_metadata(book_id, mi, force_changes=True)
 
-        if DEBUG: prints('Updated the metadata in the files of {} book(s)'.format(len(ids)))
+    #     if DEBUG: prints('Updated the metadata in the files of {} book(s)'.format(len(ids)))
 
-        info_dialog(self.gui, 'Métadonnées changées',
-                'Les métadonnées ont été effacées pour {} livre(s)'.format(len(ids)),
-                show=True)
+    #     info_dialog(self.gui, 'Métadonnées changées',
+    #             'Les métadonnées ont été effacées pour {} livre(s)'.format(len(ids)),
+    #             show=True)
 
-      # select all and only those that have been cleaned... for a possible futher action
-      # such as metadata download from calibre or choice of the volume from get_and_set_id_from_web
-        self.gui.current_db.set_marked_ids(ids)
-        self.gui.search.setEditText('marked:true')
-        self.gui.search.do_search()
-
+    #   # select all and only those that have been cleaned... for a possible futher action
+    #   # such as metadata download from calibre or choice of the volume from get_and_set_id_from_web
+    #     self.gui.current_db.set_marked_ids(ids)
+    #     self.gui.search.setEditText('marked:true')
+    #     self.gui.search.do_search()
 
     def unscramble_publisher(self):
         if DEBUG: prints("in unscramble_publisher")
@@ -551,7 +549,6 @@ class InterfacePlugin(InterfaceAction):
             mi.publisher=""
             mi.series=""
             mi.language=""
-            mi.set_identifier('gt_st_id_frm_wb_id', "")
 
             if cstm_coll_srl_fm:
                 cstm_coll_srl_fm["#value#"] = ""
@@ -580,8 +577,8 @@ class InterfacePlugin(InterfaceAction):
         def get_help_file_resource():
           # keep "GetAndSetIdFromWeb_doc.html" as the last item in the list, this is the help entry point
           # we need both files for the help
-            file_path = os.path.join(tempfile.gettempdir(), "set_id_manually_from_webengine_web_075.png")
-            file_data = self.load_resources('doc/' + "set_id_manually_from_webengine_web_075.png")['doc/' + "set_id_manually_from_webengine_web_075.png"]
+            file_path = os.path.join(tempfile.gettempdir(), "GetAndSetIdFromWeb_075.png")
+            file_data = self.load_resources('doc/' + "GetAndSetIdFromWeb_075.png")['doc/' + "GetAndSetIdFromWeb_075.png"]
             if DEBUG: prints('show_help picture - file_path:', file_path)
             with open(file_path,'wb') as fpng:
                 fpng.write(file_data)

@@ -67,6 +67,7 @@ class Bookmark_add_Dialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+        self.dbg = False
         self.PXLSIZE = PXLSIZE
 
         self.setWindowTitle("Gestion des favoris")
@@ -148,6 +149,7 @@ class Bookmark_rem_Dialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+        self.dbg = False
         self.PXLSIZE = PXLSIZE
 
         self.setWindowTitle("bookmark\n to remove")
@@ -194,6 +196,7 @@ class BookMarkToolBar(QToolBar):
     def __init__(self, parent=None):
         super(BookMarkToolBar, self).__init__(parent)
 
+        self.dbg = False
         self.actionTriggered.connect(self.onActionTriggered)        # if self involved jump to onActionTriggered()
         self.bkmrk_list = QListWidget()
         self.bkmrk_list.setSortingEnabled(False)
@@ -397,6 +400,7 @@ class Search_Panel(QWidget):
     def __init__(self,parent=None):
         super(Search_Panel,self).__init__(parent)
 
+        self.dbg = False
         next_btn = QPushButton('Suivant')
         next_btn.setToolTip("Ce bouton recherche la prochaine occurrence dans la page")
         next_btn.clicked.connect(self.update_searching)

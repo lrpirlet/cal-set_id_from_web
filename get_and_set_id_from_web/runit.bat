@@ -4,4 +4,5 @@ rem this will kill any running calibre, push a new plugin.zip where appropriate 
 
 calibre-debug -s
 calibre-customize -b .
+rem START /b calibre executes calibre sans ouvrir une nouvelle fenêtre d’invite de commandes. 
 start /b calibre

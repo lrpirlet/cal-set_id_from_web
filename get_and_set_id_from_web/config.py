@@ -41,13 +41,13 @@ class ConfigWidget(QWidget):
             prints("self.current_collection_name : ", self.current_collection_name)
             prints("self.current_coll_srl_name : ", self.current_coll_srl_name)
 
-  # define here a creator = CreateNewCustomColumn(gui) so that it remain common during the whole configuration
-  # The parameter 'gui' passed when creating a class instance is the main calibre gui (calibre.gui2.ui.get_gui())
+      # define here a creator = CreateNewCustomColumn(gui) so that it remain common during the whole configuration
+      # The parameter 'gui' passed when creating a class instance is the main calibre gui (calibre.gui2.ui.get_gui())
 
         self.gui = get_gui()
         self.creator = CreateNewCustomColumn(self.gui)
 
-  # create the combo box
+      # create the combo box
         self.create_combo_box_list("text")
         self.create_combo_box_list("comments")
         self.setGeometry(100, 100, 300, 200)
