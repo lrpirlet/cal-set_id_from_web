@@ -480,12 +480,13 @@ class MainWindow(QMainWindow):
         sl = StreamToLogger(stderr_logger, logging.ERROR)
         sys.stderr = sl
 
-      # data = [url, isbn, auteurs, titre, DEBUG]
-        self.isbn, self.auteurs, self.titre, self.dbg = data[1].replace("-",""), data[2], data[3], data[4]
+      # data = [url, isbn, auteurs, titre, type de browser, DEBUG]
+        self.isbn, self.auteurs, self.titre, self.type, self.dbg = data[1].replace("-",""), data[2], data[3], data[4], data[5]
         print("in __init__")
         print(f"isbn    : {self.isbn}")
         print(f"auteurs : {self.auteurs}")
         print(f"titre   : {self.titre}")
+        print(f"type    : {self.type}")
         print(f"dbg     : {self.dbg}")
 
       # initialize self.selected_url
@@ -549,6 +550,25 @@ class MainWindow(QMainWindow):
     # def set_it_secure(self):    # disable javascript to reduce malware surface grip
     # Not a good idea really, to suppress Javascript capabilities remove too much...
     # In fact default seems most appropiate.
+    #  
+    # from  src/calibre/utils :
+    #  
+    # def secure_webengine(view_or_page_or_settings, for_viewer=False):
+    #     s = view_or_page_or_settings.settings() if hasattr(
+    #         view_or_page_or_settings, 'settings') else view_or_page_or_settings
+    #     a = s.setAttribute
+    #     a(QWebEngineSettings.WebAttribute.PluginsEnabled, False)
+    #     if not for_viewer:
+    #         a(QWebEngineSettings.WebAttribute.JavascriptEnabled, False)
+    #         s.setUnknownUrlSchemePolicy(QWebEngineSettings.UnknownUrlSchemePolicy.DisallowUnknownUrlSchemes)
+    #         if hasattr(view_or_page_or_settings, 'setAudioMuted'):
+    #             view_or_page_or_settings.setAudioMuted(True)
+    #     a(QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows, False)
+    #     a(QWebEngineSettings.WebAttribute.JavascriptCanAccessClipboard, False)
+    #     # ensure javascript cannot read from local files
+    #     a(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, False)
+    #     a(QWebEngineSettings.WebAttribute.AllowWindowActivationFromJavaScript, False)
+    #     return s
 
       # info boxes
     def set_isbn_box(self):        # info boxes isbn
@@ -755,25 +775,35 @@ class MainWindow(QMainWindow):
     @pyqtSlot(str)
     def set_home_with_current_url(self, url_home):
         self.url_home = url_home
+        if self.dbg: print(f"url_home : {url_home}")
 
   # Navigation actions
+    def jump_to_this_url(self, url="http://www.google.com"):
+        '''
+        initial url if no defined ulr_home
+        '''
+        if self.url_home: url = self.url_home
+        if self.dbg: print(f"in jump_to_this_url url : {url}")
+        self.browser.setUrl(QUrl(url))
+
     def goto_this_url(self, url="http://www.google.com"):
         if self.dbg: print(f"in goto_this_url url : {url}")
         self.browser.setUrl(QUrl(url))
 
     def navigate_home(self):
-        if self.dbg: print("in navigate_home")
-        self.browser.setUrl(QUrl("https://www.google.com"))      # home for the 'get and set id from web' browser
+        if self.dbg: print(f"in navigate_home : {self.url_home}")
+        self.browser.setUrl(QUrl(self.url_home))      # home for the 'get and set id from web' browser
 
     def navigate_to_url(self):                    # Does not receive the Url, activated when url bar is manually changed
-        if self.dbg: print("in navigate_to_url")
-        url = QUrl(self.urlbox.text())
+        if self.dbg: print("in navigate_to_url", end = " : ",)
+        url = self.urlbox.text()
         if not url.startswith("http"):
             url = "https://" + url
-        self.browser.setUrl(url)
+        if self.dbg: print(url)
+        self.browser.setUrl(QUrl(url))
 
     def update_urlbar(self, q):
-        if self.dbg: print("in update_urlbar")
+        if self.dbg: print(f"in update_urlbar : {q.toString()}")
         self.urlbox.setText(q.toString())
         self.urlbox.setCursorPosition(0)
 
@@ -782,12 +812,12 @@ class MainWindow(QMainWindow):
       # anytime we change page we come here... let's clear and hide the search panel
         self.search_pnl.closesrch.emit()           # by sending a close search panel signal
       # before doubling indication that we load a page in the title
-        title="En téléchargement de l'url"
+        title=self.type + "En téléchargement de l'url"
         self.setWindowTitle(title)
 
     def update_title(self):
         if self.dbg: print("in update_title")
-        title = self.browser.page().title()
+        title = self.type + self.browser.page().title()
         self.setWindowTitle(title)
 
     def set_progress_bar(self):
@@ -808,6 +838,7 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(1000, wait_a_minut)
 
     def report_returned_url(self, returned_url):                # sent response over report_returned_url file in temp dir
+        returned_url = list(set(returned_url))                  # returns NO duplicates        
         if self.dbg: print(f"in report_returned_url returned_url : {returned_url}")
         with open(os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_report_url"),"w",encoding="utf_8") as report_tpf:
             for i in range(len(returned_url)):
@@ -876,12 +907,12 @@ def main(data):
     sync_tpf=tempfile.NamedTemporaryFile(prefix="GetAndSetIdFromWeb_sync-cal-qweb")
 
     # retrieve component from data
-    #        data = [url, isbn, auteurs, titre, DEBUG]
+    #        data = [url, isbn, auteurs, titre, type, DEBUG]
     url = data[0]
     # Start QWebEngineView and associated widgets
     app = Application([])
     window = MainWindow(data)
-    window.goto_this_url(url)     # supposed to be a valid page, fixed by launcher program
+    window.jump_to_this_url(url)     # supposed to be a valid page, fixed by launcher program
     app.exec()
 
     # signal launcher program that we are finished
@@ -902,7 +933,7 @@ if __name__ == '__main__':
     isbn = "2-277-12362-5"
     auteurs = "Alfred Elton VAN VOGT"                       # forget not that auteurs may be a list of auteurs
     titre = "Le Monde des Ã"
-    data = [url, isbn, auteurs, titre, True]
+    data = [url, isbn, auteurs, titre, "Recherche d'un ID en standalone", True]
     main(data)
 
     with open (os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_report_url"), "r",encoding='utf_8') as tf:
