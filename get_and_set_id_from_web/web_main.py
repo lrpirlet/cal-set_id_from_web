@@ -70,15 +70,15 @@ class Bookmark_add_Dialog(QDialog):
         self.dbg = False
         self.PXLSIZE = PXLSIZE
 
-        self.setWindowTitle("Gestion des favoris")
+        self.setWindowTitle(_("bookmark manager")) # ("Gestion des favoris")
 
         bkmrk_layout = QVBoxLayout()
         button_layout = QHBoxLayout()
         label_layout = QGridLayout()
 
-        add_btn = QPushButton("Add bookmark")
+        add_btn = QPushButton(_("Add bookmark"))
         add_btn.setDefault(True)
-        home_btn = QPushButton("Set home")
+        home_btn = QPushButton(_("Set home"))
 
         button_layout.addWidget(add_btn)
         button_layout.addWidget(home_btn)
@@ -86,8 +86,8 @@ class Bookmark_add_Dialog(QDialog):
         add_btn.pressed.connect(self.activate_add)
         home_btn.pressed.connect(self.activate_home)
 
-        label1 = QLabel("Page name:")
-        label2 = QLabel("Bookmark name:")
+        label1 = QLabel(_("Page name:"))
+        label2 = QLabel(_("Bookmark name:"))
 
         self.bkmrk = QLabel()
         self.bkmrk.setFixedWidth(self.PXLSIZE)
@@ -95,7 +95,7 @@ class Bookmark_add_Dialog(QDialog):
 
         self.pgtitle = QLineEdit()
         self.pgtitle.setFixedWidth(self.PXLSIZE*3)
-        self.pgtitle.setToolTip("Edit this line until the Bookmark name does show on a green background to get a non truncated bookmark name")
+        self.pgtitle.setToolTip(_("Edit this line until the Bookmark name does show on a green background to get a non truncated bookmark name"))
         self.pgtitle.textChanged.connect(self.display_edited_bookmark)
 
         label_layout.addWidget(label1,       0, 0)
@@ -152,11 +152,11 @@ class Bookmark_rem_Dialog(QDialog):
         self.dbg = False
         self.PXLSIZE = PXLSIZE
 
-        self.setWindowTitle("bookmark\n to remove")
+        self.setWindowTitle(_("bookmark\n to remove"))
         self.setFixedWidth(PXLSIZE+35)
 
         self.layout = QVBoxLayout(self)
-        self.remove_btn = QPushButton('Remove')
+        self.remove_btn = QPushButton(_('Remove'))
         self.remove_btn.setFixedWidth(PXLSIZE)
         self.layout.addWidget(self.remove_btn)
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
@@ -204,13 +204,13 @@ class BookMarkToolBar(QToolBar):
         self.bkmrk_add_dlg = Bookmark_add_Dialog(self)
         self.bkmrk_rem_dlg = Bookmark_rem_Dialog(self)
       # set a menu on a button inside bookmark toolbar (self, this class)
-        mgr_button = QPushButton("favoris: gestion")
+        mgr_button = QPushButton(_("bookmark manager")) # ("favoris: gestion")
         self.addWidget(mgr_button)
         mgr_menu = QMenu()
-        srt_act = mgr_menu.addAction("sort bookmark")
-        clr_act = mgr_menu.addAction("clear bookmark")
+        srt_act = mgr_menu.addAction(_("sort bookmark"))
+        clr_act = mgr_menu.addAction(_("clear bookmark"))
         # mgr_sub_menu = mgr_menu.addMenu("submenu")
-        rem_act = mgr_menu.addAction("remove")      # open list
+        rem_act = mgr_menu.addAction(_("del bookmark"))     # open list
 
         mgr_button.setMenu(mgr_menu)
         clr_act.triggered.connect(self.clear_bookmark)
@@ -371,7 +371,7 @@ class BookMarkToolBar(QToolBar):
 
     @pyqtSlot()
     def home_bkmrk(self):
-        if self.dbg : print("in home_bkmrk,I 'just' need to develop some")
+        if self.dbg : print("in home_bkmrk")
         url_home = self.bkmrk_url       # "https://www.google.com"
         self.set_url_home.emit(url_home)
 
@@ -401,23 +401,23 @@ class Search_Panel(QWidget):
         super(Search_Panel,self).__init__(parent)
 
         self.dbg = False
-        next_btn = QPushButton('Suivant')
-        next_btn.setToolTip("Ce bouton recherche la prochaine occurrence dans la page")
+        next_btn = QPushButton(_("next")) # 'Suivant')
+        next_btn.setToolTip(_("This button search the next occurance in the page")) #("Ce bouton recherche la prochaine occurrence dans la page")
         next_btn.clicked.connect(self.update_searching)
         if isinstance(next_btn, QPushButton): next_btn.clicked.connect(self.setFocus)
 
-        prev_btn = QPushButton('Précédent')
-        prev_btn.setToolTip("Ce bouton recherche l'occurrence précédente dans la page")
+        prev_btn = QPushButton(_("previous"))  #('Précédent')
+        prev_btn.setToolTip(_("This button search for the previous occurance in the page")) #("Ce bouton recherche l'occurrence précédente dans la page")
         prev_btn.clicked.connect(self.on_preview_find)
         if isinstance(prev_btn, QPushButton): prev_btn.clicked.connect(self.setFocus)
 
-        done_btn = QPushButton("Terminé")
-        done_btn.setToolTip("Ce bouton ferme la barre de recherche")
+        done_btn = QPushButton(_("done"))  #("Terminé")
+        done_btn.setToolTip(_("This button closes the search bar")) #("Ce bouton ferme la barre de recherche")
         done_btn.clicked.connect(self.closesrch)
         if isinstance(done_btn, QPushButton): done_btn.clicked.connect(self.setFocus)
 
         self.srch_dsp = QLineEdit()
-        self.srch_dsp.setToolTip(" Cette boite contient le texte à chercher dans la page")
+        self.srch_dsp.setToolTip(_("This box contains the text to search in the page"))    #("Cette boite contient le texte à chercher dans la page")
         self.setFocusProxy(self.srch_dsp)
         self.srch_dsp.textChanged.connect(self.update_searching)
         self.srch_dsp.returnPressed.connect(self.update_searching)
@@ -467,7 +467,7 @@ class MainWindow(QMainWindow):
         super().__init__()
 
       # Initialize environment..
-      # note: web_main is NOT supposed to output anything over STDOUT or STDERR
+      # note: web_main is NOT supposed to output anything over STDOUT or STDERR as those are redirected to GetAndSetIdFromWeb.log, a temp file
         logging.basicConfig(
         level = logging.DEBUG,
         format = '%(asctime)s:%(levelname)s:%(name)s:%(message)s',
@@ -574,42 +574,35 @@ class MainWindow(QMainWindow):
     def set_isbn_box(self):        # info boxes isbn
         if self.dbg: print("in set_isbn_box")
         self.isbn_btn = QPushButton(" ISBN ", self)
-        self.isbn_btn.setToolTip('Action : "Mots-clefs à rechercher" = ISBN, est copié dans le presse-papiers.')
-                                   # Action on home page: "Mots-clefs à rechercher" = ISBN, set checkbox "Livre".
+        self.isbn_btn.setToolTip(_("ISBN is copied in the clipboard (and sets noosfere search page)"))
         self.isbn_dsp = QLineEdit()
         self.isbn_dsp.setReadOnly(True)
         self.isbn_dsp.setText(self.isbn)
-        self.isbn_dsp.setToolTip(" Cette boite montre l'ISBN protégé en écriture. Du texte peut y être sélectionné pour chercher dans la page")
-                                   # This box displays the ISBN write protected. Some text may be selected here to search the page.
-
+        self.isbn_dsp.setToolTip(_("This box shows the write protected ISBN. Text may be selected here for a search in the page")) #(" Cette boite montre l'ISBN protégé en écriture. Du texte peut y être sélectionné pour chercher dans la page")
         self.isbn_lt = QHBoxLayout()
         self.isbn_lt.addWidget(self.isbn_btn)
         self.isbn_lt.addWidget(self.isbn_dsp)
 
     def set_auteurs_box(self):                  # info boxes auteurs
         if self.dbg: print("in set_auteurs_box")
-        self.auteurs_btn = QPushButton("Auteur(s)", self)
-        self.auteurs_btn.setToolTip('Action : "Mots-clefs à rechercher" = Auteur(s), est copié dans le presse-papiers.')
-                                      # Action on home page: "Mots-clefs à rechercher" = Auteur(s), set checkbox "Auteurs".
+        self.auteurs_btn = QPushButton(_("Author"), self)
+        self.auteurs_btn.setToolTip(_("Author is copied in the clipboard (and sets noosfere search page)")) 
         self.auteurs_dsp = QLineEdit()
         self.auteurs_dsp.setReadOnly(True)
         self.auteurs_dsp.setText(self.auteurs)
-        self.auteurs_dsp.setToolTip(" Cette boite montre le ou les Auteur(s) protégé(s) en écriture. Du texte peut être manuellement introduit pour chercher dans la page")
-                                      # This box displays the Author(s) write protected. Some text may be written here to search the page.
+        self.auteurs_dsp.setToolTip(_("This box shows the write protected author(s). Text may be selected here for a search in the page")) #(" Cette boite montre le ou les Auteur(s) protégé(s) en écriture. Du texte peut être manuellement introduit pour chercher dans la page")
         self.auteurs_lt = QHBoxLayout()
         self.auteurs_lt.addWidget(self.auteurs_btn)
         self.auteurs_lt.addWidget(self.auteurs_dsp)
 
     def set_titre_box(self):                    # info boxes titre
         if self.dbg: print("in set_titre_box")
-        self.titre_btn = QPushButton("Titre", self)
-        self.titre_btn.setToolTip('Action : "Mots-clefs à rechercher" = Titre, est copié dans le presse-papiers.')
-                                    # Action on home page: "Mots-clefs à rechercher" = Titre, set checkbox "Livres".
+        self.titre_btn = QPushButton(_("Title"), self)
+        self.titre_btn.setToolTip(_("Title is copied in the clipboard (and sets noosfere search page)"))
         self.titre_dsp = QLineEdit()
         self.titre_dsp.setReadOnly(True)
         self.titre_dsp.setText(self.titre)
-        self.titre_dsp.setToolTip(" Cette boite montre le Titre protégé en écriture. Tout ou partie du texte peut être sélectionné pour chercher dans la page")
-                                    # This box displays the Title write protected. Some text may be selected here to search the page.
+        self.titre_dsp.setToolTip(_("This box shows the write protected title. Text may be selected here for a search in the page"))   #(" Cette boite montre le Titre protégé en écriture. Tout ou partie du texte peut être sélectionné pour chercher dans la page")
         self.titre_lt = QHBoxLayout()
         self.titre_lt.addWidget(self.titre_btn)
         self.titre_lt.addWidget(self.titre_dsp)
@@ -643,74 +636,70 @@ class MainWindow(QMainWindow):
       # set navigation toolbar
     def set_nav_and_status_bar(self) :
         if self.dbg: print("in set_nav_and_status_bar")
-        nav_tb = QToolBar("Navigation")
+        nav_tb = QToolBar(_("Navigation"))
         nav_tb.setIconSize(QSize(24,24))
         self.addToolBar(nav_tb)
 
         back_btn = QAction(get_icons('blue_icon/back.png'), "Back", self)
-        back_btn.setToolTip("On revient à la page précédente")                      # Back to the previous page
+        back_btn.setToolTip(_("Back to the previous page")) #("On revient à la page précédente")
         back_btn.triggered.connect(self.browser.back)
         nav_tb.addAction(back_btn)
 
         next_btn = QAction(get_icons('blue_icon/forward.png'), "Forward", self)
-        next_btn.setToolTip("On retourne à la page suivante")                       # Back to the next page
+        next_btn.setToolTip(_("Back to the next page")) #("On retourne à la page suivante")
         next_btn.triggered.connect(self.browser.forward)
         nav_tb.addAction(next_btn)
 
         reload_btn = QAction(get_icons('blue_icon/reload.png'), "Reload", self)
-        reload_btn.setToolTip("On recharge la page présente")                       # Reload the page
+        reload_btn.setToolTip(_("Reload the current page"))   #("On recharge la page courante")
         reload_btn.triggered.connect(self.browser.reload)
         nav_tb.addAction(reload_btn)
 
         home_btn = QAction(get_icons('blue_icon/home.png'), "Home", self)
-        home_btn.setToolTip("On va à la page home")                                 # We go home
+        home_btn.setToolTip(_("Go home")) #("On va à la page accueil")
         home_btn.triggered.connect(self.navigate_home)
         nav_tb.addAction(home_btn)
 
         stop_btn = QAction(get_icons('blue_icon/stop.png'), "Stop", self)
-        stop_btn.setToolTip("On arrête de charger la page")                         # Stop loading the page
+        stop_btn.setToolTip(_("Stop loading the page")) #("On arrête de charger la page")
         stop_btn.triggered.connect(self.browser.stop)
         nav_tb.addAction(stop_btn)
 
         nav_tb.addSeparator()
 
         find_btn = QAction(get_icons('blue_icon/search.png'), "Search", self)
-        find_btn.setToolTip("Ce bouton fait apparaitre la barre de recherche... Z'avez pas vu Mirza? Oh la la la la la. Où est donc passé ce chien. Je le cherche partout...  (Merci Nino Ferrer)")   # search, search...
+        find_btn.setToolTip(_("Pops search bar")) #("Ce bouton fait apparaitre la barre de recherche... Z'avez pas vu Mirza? Oh la la la la la. Où est donc passé ce chien. Je le cherche partout...  (Merci Nino Ferrer)")   # search, search...
         find_btn.triggered.connect(self.wake_search_panel)
         find_btn.setShortcut(QKeySequence.StandardKey.Find)
         nav_tb.addAction(find_btn)
 
         self.urlbox = QLineEdit()
         self.urlbox.returnPressed.connect(self.navigate_to_url)
-        self.urlbox.setToolTip("On peut même introduire une adresse quelconque mais, comme toujours, A TES RISQUES ET PERILS... Il n'y a pas de filtre malware dans ce browser")
-                                # You can even enter any address you like, but as always, AT YOUR OWN RISK... No malware filtering in this browser.
+        self.urlbox.setToolTip(_("You can enter any address you like, but remember, AT YOUR OWN RISK... No malware filtering in this browser.")) #("On peut même introduire une adresse quelconque mais, cATTENTION, A VOS RISQUES ET PERILS... Il n'y a pas de filtre malware dans ce browser")
         nav_tb.addWidget(self.urlbox)
 
         favorite_btn = QAction(get_icons("blue_icon/star.png"), "bookmark", self)
-        favorite_btn.setToolTip("Défini le signet des sites favoris, défini le site maison")
+        favorite_btn.setToolTip(_("Sets the bookmark for favorites, sets home")) #("Défini le signet des sites favoris, défini le site d'accueil")
         favorite_btn.triggered.connect(self.addFavoriteClicked)
         nav_tb.addAction(favorite_btn)
 
         nav_tb.addSeparator()
         abort_btn = QAction(get_icons('blue_icon/abort.png'), "Abort", self)
-        abort_btn.setToolTip("On arrête, on oublie, on ne change rien au livre... au suivant")
-                              # Stop everything, forget everything and change nothing... proceed to next book
+        abort_btn.setToolTip(_("Stop everything, forget everything and change nothing... proceed to next book"))    #("On arrête, on oublie, on ne change rien au livre... au suivant")
         abort_btn.triggered.connect(self.abort_book)
         nav_tb.addAction(abort_btn)
 
         nav_tb.addSeparator()
 
         choice_btn = QAction(get_icons('blue_icon/choice.png'), "Select and store", self)
-        choice_btn.setToolTip("On sélectionne cet URL pour extraction de l'id... même livre, id suivant")
-                             # select this URL for extraction of the id, continue
+        choice_btn.setToolTip(_("select this URL for extracting the id, another id?"))   #("On sélectionne cet URL pour extraction de l'id... un autre id?")
         choice_btn.triggered.connect(self.select_an_id)
         nav_tb.addAction(choice_btn)
 
         nav_tb.addSeparator()
 
         exit_btn = QAction(get_icons('blue_icon/exit.png'), "Done and exit", self)
-        exit_btn.setToolTip("On a fini de sélectionner les id... livre suivant")
-                             # select this URL for extraction of the id, continue
+        exit_btn.setToolTip(_("done selecting id(s)... next")) #("On a fini de sélectionner les id... livre suivant")
         exit_btn.triggered.connect(self.done_do_exit)
         nav_tb.addAction(exit_btn)
   # bookmark bar (need a def)
@@ -738,7 +727,7 @@ class MainWindow(QMainWindow):
         print(f"in on_searched text : {text}, flag : {flag}")
         def callback(found):
             if text and not found:
-                self.msg_label.setText('Désolé, {} pas trouvé...'.format(text))     # Sorry "text" not found
+                self.msg_label.setText(_("Sorry {} not found.").format(text))   #('Désolé, {} pas trouvé...'.format(text))
             else:
                 self.msg_label.setText('')
         self.browser.findText(text, flag, callback)
@@ -828,7 +817,7 @@ class MainWindow(QMainWindow):
     def update_progress_bar(self, progress):
         if self.dbg: print("in update_progress_bar progress : {}".format(progress))
         self.page_load_pb.setValue(progress)
-        self.page_load_label.setText("En téléchargement de l'url... ({}/100)".format(str(progress)))
+        self.page_load_label.setText(_("Downloading url... ({/100})").format(str(progress)))    #("En téléchargement de l'url... ({}/100)".format(str(progress)))
 
     def reset_progress_bar(self):
         if self.dbg: print("in reset_progress_bar")
@@ -853,14 +842,9 @@ class MainWindow(QMainWindow):
 
   # Bookmark actions
     def addFavoriteClicked(self):
-        loop = QEventLoop()
-        def callback(resp):
-            setattr(self, "title", resp)
-            loop.quit()
-        self.browser.page().runJavaScript("(function() { return document.title;})();", callback)
+        title = self.browser.page().title()
         chsn_url = self.urlbox.text()
-        loop.exec()
-        self.bookmarkToolbar.bkmrk_select_action(getattr(self, "title"), chsn_url)
+        self.bookmarkToolbar.bkmrk_select_action(title, chsn_url)
 
   # exit actions
     def done_do_exit(self):
@@ -873,7 +857,9 @@ class MainWindow(QMainWindow):
 
     def abort_book(self):                           # we want to NOT change the book and proceed to the next one
         if self.dbg: print("in abort_book")
-        reply = QMessageBox.question(self, 'Certain', "Oublier ce livre et passer au suivant", QMessageBox.No | QMessageBox.Yes, QMessageBox.Yes)
+        d_ttl = _("Sure?")  #'Certain?'
+        d_txt = _("forget this book and proceed with next")    # "Oublier ce livre et passer au suivant"
+        reply = QMessageBox.question(self, d_ttl, d_txt, QMessageBox.No | QMessageBox.Yes, QMessageBox.Yes)
         if reply == QMessageBox.Yes:
             print("WebEngineView was aborted for this book: aborted")
             self.report_returned_url(["aborted by user"])
@@ -881,7 +867,9 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):                    # abort hit window exit "X" button we stop processing this and all following books
         print(f"in closeEvent event : {event}")
-        reply = QMessageBox.question(self, 'Vraiment', "Quitter et ne plus rien changer", QMessageBox.No | QMessageBox.Yes, QMessageBox.Yes)
+        d_ttl = _("Really?")    #'Vraiment?'
+        d_txt = _("Quit now and change nothing anymore")    # "Quitter ici et ne plus rien changer"
+        reply = QMessageBox.question(self, d_ttl, d_txt, QMessageBox.No | QMessageBox.Yes, QMessageBox.Yes)
         if reply == QMessageBox.Yes:
             event.accept()
             print("WebEngineView was closed: killed")
