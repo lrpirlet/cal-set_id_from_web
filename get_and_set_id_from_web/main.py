@@ -17,6 +17,11 @@ from qt.core import (QMenu, QMessageBox, QToolButton, QUrl, QEventLoop, QTimer)
 
 import tempfile, glob, os, contextlib
 
+try:
+    load_translations()
+except NameError:
+    pass
+
 def create_menu_action_unique(ia, parent_menu, menu_text, image=None, tooltip=None,
                        shortcut=None, triggered=None, is_checked=None, shortcut_name=None,
                        unique_name=None, favourites_menu_unique_name=None):
@@ -68,8 +73,8 @@ def create_menu_action_unique(ia, parent_menu, menu_text, image=None, tooltip=No
 class InterfacePlugin(InterfaceAction):
 
     name = 'get and set id from web'
-    action_spec = (_("get and set id from web"), None,
-            _("run a webengine to set one or more ID manually"), None)
+    action_spec = (_("Fix id from web"), None,
+            _("Run a webengine to set one or more ID manually"), None)
     popup_type = QToolButton.InstantPopup
     action_add_menu = True
     action_type = 'current'
@@ -127,7 +132,7 @@ class InterfacePlugin(InterfaceAction):
                                   triggered=self.get_ids_for_books)
         self.menu.addSeparator()
 
-        create_menu_action_unique(self, self.menu, _('Web browser to add a series of books associated to the selected books before optionally downloading metadata'), 'blue_icon/choice.png',
+        create_menu_action_unique(self, self.menu, _('Web browser to add a series of empty books associated to the selected books before optionally downloading metadata'), 'blue_icon/choice.png',
                                   triggered=self.add_series_of_books_from_web)
         self.menu.addSeparator()
 
@@ -135,7 +140,7 @@ class InterfacePlugin(InterfaceAction):
                                   triggered=self.unscramble_publisher)
         self.menu.addSeparator()
 
-        create_menu_action_unique(self, self.menu, _("Create and configure the customized columns for noosfere) ")+'...', 'blue_icon/config.png',
+        create_menu_action_unique(self, self.menu, _("Create and configure the customized columns for noosfere")+'...', 'blue_icon/config.png',
                                   triggered=self.set_configuration)
         self.menu.addSeparator()
 
@@ -152,14 +157,14 @@ class InterfacePlugin(InterfaceAction):
     def handle_shutdown(self):
         '''
         The web_browser is spawned from main calibre so both calibre and this process run concurrently.
-        It is possible to kill (main) calibre while the (get_and_set_id_from_web) web_browser
+        It is possible to kill (main) calibre while the get_and_set_id_from_web web_browser
         detached process is still running. If a book is selected, then the probability of hanging
         (main) calibre is very high, preventing to restart calibre.
         A process named "The main calibre program" is still running...
         The workaround is to kill this process or to reboot...
 
         To avoid this situation, A signal named "shutdown_started" was implemented so that about
-        2 seconds are available to the (get_and_set_id_from_web) web_browser detached process
+        2 seconds are available to the get_and_set_id_from_web web_browser detached process
         to shutdown cleanly.
 
         The handle_shutdown(), triggered by the signal, do create a temp file that tells
@@ -210,7 +215,7 @@ class InterfacePlugin(InterfaceAction):
       # Get currently selected books
         rows = self.gui.library_view.selectionModel().selectedRows()
         if not rows or len(rows) == 0:
-            return error_dialog(self.gui, _("no metadata touched"),_("no book selected"), show=True)
+            return error_dialog(self.gui, _("No metadata touched"),_("No book selected"), show=True)
 
       # Map the rows to book ids
         ids = list(map(self.gui.library_view.model().id, rows))
@@ -238,7 +243,7 @@ class InterfacePlugin(InterfaceAction):
       # tell user about what has been done...sorry, NOT if main calibre is closed...
         if not self.do_shutdown:
             if self.debug: prints('gt_st_id_frm_wb_id is recorded, metadata is prepared for {} book(s) out of {}'.format(nbr_ok, len(ids)))
-            info_dialog(self.gui, _('get and set id from web: id(s) recorded)'),
+            info_dialog(self.gui, _('Fix id from web') + ":" + _('id(s) recorded'),
                 _('The metadata id field is filled for {} book(s) out of {} selected').format(nbr_ok, len(ids)),
                 show=True)
           # new_api does not know anything about marked books, so we use the full db object
@@ -309,10 +314,10 @@ class InterfacePlugin(InterfaceAction):
 
             if returned_url:
                 if "aborted" in returned_url:
-                    prints('aborted, ' + _('no change will take place...'))
+                    prints('Aborted, ' + _('no change will take place...'))
                     return (False, True)                                # gt_st_id_frm_wb_id NOT received, more book
                 elif "killed" in returned_url:
-                    prints('killed, ' + _('no change will take place...'))
+                    prints('Killed, ' + _('no change will take place...'))
                     return (False, False)                               # gt_st_id_frm_wb_id NOT received, NO more book
                 else:
                     returned_id=[]  #id_name, gt_st_id_frm_wb_id
@@ -321,7 +326,7 @@ class InterfacePlugin(InterfaceAction):
                         if rtnid :
                             returned_id.append(rtnid)
                     if not returned_id:
-                        prints(_('no id could be extracted from url, no change will take place...'))
+                        prints(_('No id could be extracted from url, ') + _('no change will take place...'))
                         return (False, True)                             # gt_st_id_frm_wb_id NOT received, more book
 
             for key in mi.custom_field_keys():
@@ -359,7 +364,7 @@ class InterfacePlugin(InterfaceAction):
       # Get currently selected books
         rows = self.gui.library_view.selectionModel().selectedRows()
         if not rows or len(rows) == 0:
-            return error_dialog(self.gui, _("no metadata touched"),_("no book selected"), show=True)    
+            return error_dialog(self.gui, _("No metadata touched"),_("No book selected"), show=True)    
             # return error_dialog(self.gui, 'Pas de métadonnées affectées','Aucun livre sélectionné', show=True)
 
       # Map the rows to book ids
@@ -435,10 +440,10 @@ class InterfacePlugin(InterfaceAction):
 
             if returned_url:
                 if "aborted" in returned_url:
-                    prints('aborted, ' + _('no change will take place...'))
+                    prints('Aborted, ' + _('no change will take place...'))
                     return (False, True)                                # gt_st_id_frm_wb_id NOT received, more book
                 elif "killed" in returned_url:
-                    prints('killed, ' + _('no change will take place...'))
+                    prints('Killed, ' + _('no change will take place...'))
                     return (False, False)                               # gt_st_id_frm_wb_id NOT received, NO more book
                 else:
                     returned_id=[]  #id_name, gt_st_id_frm_wb_id
@@ -446,7 +451,7 @@ class InterfacePlugin(InterfaceAction):
                         returned_id.append(self.deduce_id_frm_url(returned_url[i]))
                     returned_id = list(set(returned_id))            # ensure NO duplicate in returned_id
                     if not returned_id:
-                        prints(_('no id could be extracted from url, no change will take place...'))
+                        prints(_('No id could be extracted from url, ') + _('no change will take place...'))
                         return (False, True)                            # gt_st_id_frm_wb_id NOT received, more book
 
         if self.do_shutdown:
@@ -473,7 +478,7 @@ class InterfacePlugin(InterfaceAction):
       # Get currently selected books
         rows = self.gui.library_view.selectionModel().selectedRows()
         if not rows or len(rows) == 0:
-            return error_dialog(self.gui, _("no metadata touched"),_("no book selected"), show=True)
+            return error_dialog(self.gui, _("No metadata touched"),_("No book selected"), show=True)
             # return error_dialog(self.gui, 'Pas de métadonnées affectées','Aucun livre sélectionné', show=True)
 
         # Map the rows to book ids
@@ -513,9 +518,13 @@ class InterfacePlugin(InterfaceAction):
         for key, column in custom_columns.items(): all_custom_col.append(key)
         if self.debug: prints("all_custom_col :", all_custom_col)
         if (self.collection_name and self.coll_srl_name) not in all_custom_col:
-            if self.debug: prints("Okay, Houston...we've had a problem here (Apollo 13)")
-            text = _("<p> One column or the other, if not both are missing... Please do correct that.</p>")
-            text += _("<p> <strong>get_and_set_id_from_web</strong> may be used to <br/><strong>Create and configure the customized columns...</strong>.</p>")
+            if self.debug: prints("Okay, Houston...we've had a problem here (Apollo 13): non existant column")
+            text = _("<p> One column or the other, if not both are missing... Please do correct that.")
+            text += "</p><p> <strong>" + _("Fix id from web") + "</strong>"
+            text += _(' may be used to ')
+            text += '<br/><strong>'
+            text += _('Create and configure the customized columns for noosfere')
+            text += "</strong>.</p>"
 
             error_dialog(self.gui, _('Non existing columns'), text, show=True)
             return False
@@ -553,8 +562,8 @@ class InterfacePlugin(InterfaceAction):
 
     def about(self):
         text = get_resources("doc/about.txt")
-        text += (_("\nLe nom de la collection par l'éditeur est : {},").format(self.collection_name)).encode('utf-8')
-        text += (_("\nLe numéro d'ordre dans la collection par l'éditeur est : {}").format(self.coll_srl_name)).encode('utf-8')
+        text += "\n" + (_("The name of publisher's collection will be under") + " : {},".format(self.collection_name)).encode('utf-8')
+        text += "\n" + (_("The code in the publisher collection's will be under") + " : {}".format(self.coll_srl_name)).encode('utf-8')
         QMessageBox.about(self.gui, _('About the get_and_set_id_from_web'), text.decode('utf-8'))
 
     def apply_settings(self):

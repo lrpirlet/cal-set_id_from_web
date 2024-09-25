@@ -1,0 +1,400 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR ORGANIZATION
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"POT-Creation-Date: 2024-09-24 18:04+0200\n"
+"PO-Revision-Date: 2024-09-24 18:09+0200\n"
+"Last-Translator: Louis Richard Pirlet\n"
+"Language-Team: \n"
+"Language: fr_FR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: pygettext.py 1.5\n"
+"X-Generator: Poedit 3.5\n"
+
+#: config.py:67 config.py:71 config.py:132 config.py:141 config.py:173
+#: config.py:178
+msgid "Add and select a column"
+msgstr "Ajout et sélection d'une colonne"
+
+#: config.py:96
+msgid ""
+"Select the columns to distribute the publisher overloaded information "
+"(noosfere)."
+msgstr ""
+"Sélectionne les colonnes pour distribuer les informations surchargées de "
+"l'éditeur (noosfere)."
+
+#: config.py:99
+msgid "To create and/or select a column means restarting calibre."
+msgstr ""
+"La création et/ou la sélection d'une colonne nécessite le redémarrage de "
+"calibre."
+
+#: config.py:101
+msgid "Name of collection publisher"
+msgstr "Nom de la collection éditeur"
+
+#: config.py:102 config.py:110
+msgid "Displayed column is actualy selected"
+msgstr "La colonne affichée est actuellement sélectionnée"
+
+#: config.py:108
+msgid "Code in the publisher's collection"
+msgstr "Code dans la collection de l'éditeur"
+
+#: config.py:152
+msgid "The publisher collection name for the volume"
+msgstr "Le nom de la collection de l'éditeur pour le volume"
+
+#: config.py:157
+msgid "The code in the publisher's collection"
+msgstr "Le code dans la collection de l'éditeur"
+
+#: config.py:162 config.py:192
+msgid "Calibre must restart, sorry"
+msgstr "Désolé, calibre doit redémarrer"
+
+#: config.py:163
+msgid "No more modification cannot be taken into account."
+msgstr "Plus aucune modification ne peut être prise en compte."
+
+#: config.py:164
+msgid "Calibre needs to be restarted before proceding"
+msgstr "Calibre doit être redémarré avant de poursuivre la procédure"
+
+#: config.py:193
+msgid "In order to take effect, the choice of column needs a restart..."
+msgstr "Pour prendre effet, le choix de la colonne nécessite un redémarrage..."
+
+#: config.py:194 main.py:565
+msgid "The name of publisher's collection will be under"
+msgstr "Le nom de la collection de l'éditeur sera sous"
+
+#: config.py:196 main.py:566
+msgid "The code in the publisher collection's will be under"
+msgstr "Le code dans la collection de l'éditeur sera sous"
+
+#: config.py:206
+msgid "&Restart calibre now"
+msgstr "&Redémarrer calibre maintenant"
+
+#: main.py:76 main.py:246
+msgid "Fix id from web"
+msgstr "Fixe l'id depuis le web"
+
+#: main.py:77
+msgid "Run a webengine to set one or more ID manually"
+msgstr ""
+"Exécuter un moteur web pour définir manuellement un ou plusieurs identifiants"
+
+#: main.py:131
+msgid ""
+"Web browser to add one or more id to the selected book(s) before optionally "
+"downloading metadata"
+msgstr ""
+"Navigateur web pour ajouter un ou plusieurs identifiants au(x) livre(s) "
+"sélectionné(s) avant d'éventuellement télécharger les métadonnées"
+
+#: main.py:135
+msgid ""
+"Web browser to add a series of empty books associated to the selected books "
+"before optionally downloading metadata"
+msgstr ""
+"Navigateur web pour ajouter une série de livres vides associés aux livres "
+"sélectionnés avant d'éventuellement télécharger les métadonnées"
+
+#: main.py:139
+msgid ""
+"Distribute overloaded information in publisher field (noosfere specific)"
+msgstr ""
+"Distribuer les informations surchargées dans le champ de l'éditeur "
+"(spécifique à noosfere )"
+
+#: main.py:143 main.py:526
+msgid "Create and configure the customized columns for noosfere"
+msgstr "Créer et configurer les colonnes personnalisées pour noosfere"
+
+#: main.py:147
+msgid "Help"
+msgstr "Aide"
+
+#: main.py:149
+msgid "About"
+msgstr "A propos"
+
+#: main.py:218 main.py:367 main.py:481
+msgid "No book selected"
+msgstr "Aucun livre sélectionné"
+
+#: main.py:218 main.py:367 main.py:481
+msgid "No metadata touched"
+msgstr "Aucune métadonnée touchée"
+
+#: main.py:246
+msgid "id(s) recorded"
+msgstr "identifiant(s) enregistré(s)"
+
+#: main.py:247
+msgid "The metadata id field is filled for {} book(s) out of {} selected"
+msgstr ""
+"Le champ d'identification dans les métadonnées est rempli pour {} livre(s) "
+"sur {} sélectionné(s)"
+
+#: main.py:286
+msgid "Search id(s) to add to selected book."
+msgstr "Recherche d'identifiant(s) à ajouter au livre sélectionné."
+
+#: main.py:317 main.py:320 main.py:329 main.py:443 main.py:446 main.py:454
+msgid "no change will take place..."
+msgstr "aucune modification ne sera apportée..."
+
+#: main.py:329 main.py:454
+msgid "No id could be extracted from url, "
+msgstr "Aucun identifiant n'a pu être extrait de l'url,  "
+
+#: main.py:413
+msgid "Search id(s) to create empty book(s)."
+msgstr "Recherche d'identifiant(s) pour créer un ou des livre(s) vide(s)."
+
+#: main.py:506
+msgid "Information distributed"
+msgstr "Informations distribuées"
+
+#: main.py:507
+msgid "The information was distributed for {} book(s)."
+msgstr "Les informations ont été distribuées pour {} livre(s)."
+
+#: main.py:522
+msgid ""
+"<p> One column or the other, if not both are missing... Please do correct "
+"that."
+msgstr ""
+"<p>L'une ou l'autre colonne, sinon les deux, sont manquantes... Veuillez "
+"corriger cela."
+
+#: main.py:524
+msgid "may be used to "
+msgstr "peut être utilisé pour "
+
+#: main.py:529
+msgid "Non existing columns"
+msgstr "Colonnes inexistantes"
+
+#: main.py:567
+msgid "About the get_and_set_id_from_web"
+msgstr "A propos de get_and_set_id_from_web"
+
+#: web_main.py:78 web_main.py:212
+msgid "Bookmark manager"
+msgstr "Gestionnaire de signets"
+
+#: web_main.py:84
+msgid "Add bookmark"
+msgstr "Ajouter un signet"
+
+#: web_main.py:86
+msgid "Set home"
+msgstr "Fixe la page d'accueil"
+
+#: web_main.py:94
+msgid "Page name:"
+msgstr "Nom de la page :"
+
+#: web_main.py:95
+msgid "Bookmark name:"
+msgstr "Nom du signet :"
+
+#: web_main.py:103
+msgid ""
+"Edit this line until the Bookmark name does show on a green background to "
+"get a non truncated bookmark name"
+msgstr ""
+"Modifiez cette ligne jusqu'à ce que le nom du signet apparaisse sur fond "
+"vert pour obtenir un nom de signet non tronqué"
+
+#: web_main.py:160
+msgid ""
+"Bookmark\n"
+" to remove"
+msgstr ""
+"Signet\n"
+"à supprimer"
+
+#: web_main.py:164
+msgid "Remove"
+msgstr "Supprimer"
+
+#: web_main.py:215
+msgid "Sort bookmark"
+msgstr "Trier les signets"
+
+#: web_main.py:216
+msgid "Clear bookmark"
+msgstr "Supprimer tout"
+
+#: web_main.py:218
+msgid "Del bookmark"
+msgstr ""
+"Supprimer \n"
+"ce signet"
+
+#: web_main.py:409
+msgid "Next"
+msgstr "Suivant"
+
+#: web_main.py:410
+msgid "This button search the next occurance in the page"
+msgstr "Ce bouton permet de rechercher l'occurrence suivante dans la page"
+
+#: web_main.py:414
+msgid "Previous"
+msgstr "Précédent"
+
+#: web_main.py:415
+msgid "This button search for the previous occurance in the page"
+msgstr "Ce bouton permet de rechercher l'occurrence précédente dans la page"
+
+#: web_main.py:419
+msgid "Done"
+msgstr "Terminé"
+
+#: web_main.py:420
+msgid "This button closes the search bar"
+msgstr "Ce bouton ferme la barre de recherche"
+
+#: web_main.py:425
+msgid "This box contains the text to search in the page"
+msgstr "Ce champ contient le texte à rechercher dans la page"
+
+#: web_main.py:582
+msgid "ISBN is copied in the clipboard (and fills noosfere search page)"
+msgstr ""
+"L'ISBN est copié dans le presse-papiers (et remplit la page de recherche de "
+"noosfere)"
+
+#: web_main.py:586
+msgid ""
+"This box shows the write protected ISBN. Text may be selected here for a "
+"search in the page"
+msgstr ""
+"Cette boite montre l'ISBN protégé en écriture. Du texte peut y être "
+"sélectionné pour chercher dans la page"
+
+#: web_main.py:593
+msgid "Author"
+msgstr "Auteur"
+
+#: web_main.py:594
+msgid "Author is copied in the clipboard (and fills noosfere search page)"
+msgstr ""
+"L'auteur est copié dans le presse-papiers (et remplit la page de recherche "
+"de noosfere)"
+
+#: web_main.py:598
+msgid ""
+"This box shows the write protected author(s). Text may be selected here for "
+"a search in the page"
+msgstr ""
+"Cette boite montre le ou les Auteur(s) protégé(s) en écriture. Du texte peut "
+"être manuellement sélectionné pour chercher dans la page"
+
+#: web_main.py:605
+msgid "Title"
+msgstr "Titre"
+
+#: web_main.py:606
+msgid "Title is copied in the clipboard (and fills noosfere search page)"
+msgstr ""
+"Le titre est copié dans le presse-papiers (et remplit la page de recherche "
+"de noosfere)"
+
+#: web_main.py:610
+msgid ""
+"This box shows the write protected title. Text may be selected here for a "
+"search in the page"
+msgstr ""
+"Cette boite montre le titre protégé en écriture. Tout ou partie du texte "
+"peut être sélectionné pour chercher dans la page"
+
+#: web_main.py:644
+msgid "Navigation"
+msgstr "Navigation"
+
+#: web_main.py:649
+msgid "Back to the previous page"
+msgstr "Retour à la page précédente"
+
+#: web_main.py:654
+msgid "Back to the next page"
+msgstr "Retour à la page suivante"
+
+#: web_main.py:659
+msgid "Reload the current page"
+msgstr "Recharger la page actuelle"
+
+#: web_main.py:664
+msgid "Go home"
+msgstr "Retour à la page d'accueil"
+
+#: web_main.py:669
+msgid "Stop loading the page"
+msgstr "Arrêter le chargement de la page"
+
+#: web_main.py:676
+msgid "Pops search bar"
+msgstr "Ouvre la barre de recherche"
+
+#: web_main.py:683
+msgid ""
+"You can enter any address you like, but remember, AT YOUR OWN RISK... No "
+"malware filtering in this browser."
+msgstr ""
+"Vous pouvez entrer l'adresse de votre choix, mais rappelez vous, À VOS "
+"PROPRES RISQUES… Ce navigateur ne filtre pas les logiciels malveillants."
+
+#: web_main.py:687
+msgid "Sets the bookmark for favorites, sets home"
+msgstr "Définit le signet pour les favoris, définit l'accueil"
+
+#: web_main.py:693
+msgid ""
+"Stop everything, forget everything and change nothing... proceed to next book"
+msgstr "Tout arrêter, tout oublier et ne rien changer… passer au livre suivant"
+
+#: web_main.py:700
+msgid "select this URL for extracting the id, another id?"
+msgstr ""
+"sélectionner cette URL pour extraire l'identifiant… un autre identifiant ?"
+
+#: web_main.py:707
+msgid "Done selecting id(s)... next"
+msgstr "La sélection des identifiants est terminée… suivant"
+
+#: web_main.py:735
+msgid "Sorry {} not found"
+msgstr "Désolé {} n'a pas été trouvé"
+
+#: web_main.py:825
+msgid "Downloading url... ({}/100)"
+msgstr "Téléchargement de l'url : ({}/100)"
+
+#: web_main.py:865
+msgid "Sure?"
+msgstr "Certain?"
+
+#: web_main.py:866
+msgid "Forget this book and proceed with next"
+msgstr "Oublie ce livre et traite le suivant"
+
+#: web_main.py:875
+msgid "Really?"
+msgstr "Vraiment?"
+
+#: web_main.py:876
+msgid "Quit now and change nothing anymore"
+msgstr "Sortir maintenant et ne change plus rien du tout"

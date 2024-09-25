@@ -41,6 +41,11 @@ import tempfile, glob, os, sys, logging
 
 PXLSIZE = 125   # I need this constant in several classes
 
+try:
+    load_translations()
+except NameError:
+    pass
+
 class StreamToLogger():
     """
     Fake file-like stream object that redirects writes to a logger instance.
@@ -70,7 +75,7 @@ class Bookmark_add_Dialog(QDialog):
         self.dbg = False
         self.PXLSIZE = PXLSIZE
 
-        self.setWindowTitle(_("bookmark manager")) # ("Gestion des favoris")
+        self.setWindowTitle(_("Bookmark manager")) # ("Gestion des favoris")
 
         bkmrk_layout = QVBoxLayout()
         button_layout = QHBoxLayout()
@@ -152,7 +157,7 @@ class Bookmark_rem_Dialog(QDialog):
         self.dbg = False
         self.PXLSIZE = PXLSIZE
 
-        self.setWindowTitle(_("bookmark\n to remove"))
+        self.setWindowTitle(_("Bookmark\n to remove"))
         self.setFixedWidth(PXLSIZE+35)
 
         self.layout = QVBoxLayout(self)
@@ -204,13 +209,13 @@ class BookMarkToolBar(QToolBar):
         self.bkmrk_add_dlg = Bookmark_add_Dialog(self)
         self.bkmrk_rem_dlg = Bookmark_rem_Dialog(self)
       # set a menu on a button inside bookmark toolbar (self, this class)
-        mgr_button = QPushButton(_("bookmark manager")) # ("favoris: gestion")
+        mgr_button = QPushButton(_("Bookmark manager")) # ("favoris: gestion")
         self.addWidget(mgr_button)
         mgr_menu = QMenu()
-        srt_act = mgr_menu.addAction(_("sort bookmark"))
-        clr_act = mgr_menu.addAction(_("clear bookmark"))
+        srt_act = mgr_menu.addAction(_("Sort bookmark"))
+        clr_act = mgr_menu.addAction(_("Clear bookmark"))
         # mgr_sub_menu = mgr_menu.addMenu("submenu")
-        rem_act = mgr_menu.addAction(_("del bookmark"))     # open list
+        rem_act = mgr_menu.addAction(_("Del bookmark"))     # open list
 
         mgr_button.setMenu(mgr_menu)
         clr_act.triggered.connect(self.clear_bookmark)
@@ -401,17 +406,17 @@ class Search_Panel(QWidget):
         super(Search_Panel,self).__init__(parent)
 
         self.dbg = False
-        next_btn = QPushButton(_("next")) # 'Suivant')
+        next_btn = QPushButton(_("Next")) # 'Suivant')
         next_btn.setToolTip(_("This button search the next occurance in the page")) #("Ce bouton recherche la prochaine occurrence dans la page")
         next_btn.clicked.connect(self.update_searching)
         if isinstance(next_btn, QPushButton): next_btn.clicked.connect(self.setFocus)
 
-        prev_btn = QPushButton(_("previous"))  #('Précédent')
+        prev_btn = QPushButton(_("Previous"))  #('Précédent')
         prev_btn.setToolTip(_("This button search for the previous occurance in the page")) #("Ce bouton recherche l'occurrence précédente dans la page")
         prev_btn.clicked.connect(self.on_preview_find)
         if isinstance(prev_btn, QPushButton): prev_btn.clicked.connect(self.setFocus)
 
-        done_btn = QPushButton(_("done"))  #("Terminé")
+        done_btn = QPushButton(_("Done"))  #("Terminé")
         done_btn.setToolTip(_("This button closes the search bar")) #("Ce bouton ferme la barre de recherche")
         done_btn.clicked.connect(self.closesrch)
         if isinstance(done_btn, QPushButton): done_btn.clicked.connect(self.setFocus)
@@ -574,7 +579,7 @@ class MainWindow(QMainWindow):
     def set_isbn_box(self):        # info boxes isbn
         if self.dbg: print("in set_isbn_box")
         self.isbn_btn = QPushButton(" ISBN ", self)
-        self.isbn_btn.setToolTip(_("ISBN is copied in the clipboard (and sets noosfere search page)"))
+        self.isbn_btn.setToolTip(_("ISBN is copied in the clipboard (and fills noosfere search page)"))
         self.isbn_dsp = QLineEdit()
         self.isbn_dsp.setReadOnly(True)
         self.isbn_dsp.setText(self.isbn)
@@ -586,7 +591,7 @@ class MainWindow(QMainWindow):
     def set_auteurs_box(self):                  # info boxes auteurs
         if self.dbg: print("in set_auteurs_box")
         self.auteurs_btn = QPushButton(_("Author"), self)
-        self.auteurs_btn.setToolTip(_("Author is copied in the clipboard (and sets noosfere search page)")) 
+        self.auteurs_btn.setToolTip(_("Author is copied in the clipboard (and fills noosfere search page)")) 
         self.auteurs_dsp = QLineEdit()
         self.auteurs_dsp.setReadOnly(True)
         self.auteurs_dsp.setText(self.auteurs)
@@ -598,7 +603,7 @@ class MainWindow(QMainWindow):
     def set_titre_box(self):                    # info boxes titre
         if self.dbg: print("in set_titre_box")
         self.titre_btn = QPushButton(_("Title"), self)
-        self.titre_btn.setToolTip(_("Title is copied in the clipboard (and sets noosfere search page)"))
+        self.titre_btn.setToolTip(_("Title is copied in the clipboard (and fills noosfere search page)"))
         self.titre_dsp = QLineEdit()
         self.titre_dsp.setReadOnly(True)
         self.titre_dsp.setText(self.titre)
@@ -699,7 +704,7 @@ class MainWindow(QMainWindow):
         nav_tb.addSeparator()
 
         exit_btn = QAction(get_icons('blue_icon/exit.png'), "Done and exit", self)
-        exit_btn.setToolTip(_("done selecting id(s)... next")) #("On a fini de sélectionner les id... livre suivant")
+        exit_btn.setToolTip(_("Done selecting id(s)... next")) #("On a fini de sélectionner les id... livre suivant")
         exit_btn.triggered.connect(self.done_do_exit)
         nav_tb.addAction(exit_btn)
   # bookmark bar (need a def)
@@ -727,7 +732,7 @@ class MainWindow(QMainWindow):
         print(f"in on_searched text : {text}, flag : {flag}")
         def callback(found):
             if text and not found:
-                self.msg_label.setText(_("Sorry {} not found.").format(text))   #('Désolé, {} pas trouvé...'.format(text))
+                self.msg_label.setText(_("Sorry {} not found").format(text))   #('Désolé, {} pas trouvé...'.format(text))
             else:
                 self.msg_label.setText('')
         self.browser.findText(text, flag, callback)
@@ -781,7 +786,7 @@ class MainWindow(QMainWindow):
 
     def navigate_home(self):
         if self.dbg: print(f"in navigate_home : {self.url_home}")
-        self.browser.setUrl(QUrl(self.url_home))      # home for the 'get and set id from web' browser
+        self.browser.setUrl(QUrl(self.url_home))      # home for the 'get_and_set_id_from_web' browser
 
     def navigate_to_url(self):                    # Does not receive the Url, activated when url bar is manually changed
         if self.dbg: print("in navigate_to_url", end = " : ",)
@@ -817,7 +822,7 @@ class MainWindow(QMainWindow):
     def update_progress_bar(self, progress):
         if self.dbg: print("in update_progress_bar progress : {}".format(progress))
         self.page_load_pb.setValue(progress)
-        self.page_load_label.setText(_("Downloading url... ({/100})").format(str(progress)))    #("En téléchargement de l'url... ({}/100)".format(str(progress)))
+        self.page_load_label.setText(_("Downloading url... ({}/100)").format(str(progress)))    #("En téléchargement de l'url... ({}/100)".format(str(progress)))
 
     def reset_progress_bar(self):
         if self.dbg: print("in reset_progress_bar")
@@ -858,7 +863,7 @@ class MainWindow(QMainWindow):
     def abort_book(self):                           # we want to NOT change the book and proceed to the next one
         if self.dbg: print("in abort_book")
         d_ttl = _("Sure?")  #'Certain?'
-        d_txt = _("forget this book and proceed with next")    # "Oublier ce livre et passer au suivant"
+        d_txt = _("Forget this book and proceed with next")    # "Oublier ce livre et passer au suivant"
         reply = QMessageBox.question(self, d_ttl, d_txt, QMessageBox.No | QMessageBox.Yes, QMessageBox.Yes)
         if reply == QMessageBox.Yes:
             print("WebEngineView was aborted for this book: aborted")
@@ -890,7 +895,7 @@ class MainWindow(QMainWindow):
 
 def main(data):
 
-    # create a temp file... while it exists launcher program will wait...
+# create a temp file... while it exists launcher program will wait...
     # this file will disappear with the process
     sync_tpf=tempfile.NamedTemporaryFile(prefix="GetAndSetIdFromWeb_sync-cal-qweb")
 

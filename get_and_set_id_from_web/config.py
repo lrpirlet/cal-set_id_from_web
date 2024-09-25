@@ -20,6 +20,10 @@ prefs = JSONConfig('plugins/get_and_set_id_manually_from_web')
 prefs.defaults["COLLECTION_NAME"] = "#collection"
 prefs.defaults["COLL_SRL_NAME"] = "#coll_srl"
 
+try:
+    load_translations()
+except NameError:
+    pass
 
 class ConfigWidget(QWidget):
 
@@ -60,11 +64,11 @@ class ConfigWidget(QWidget):
         if DEBUG: prints("\nIn create_combo_box_list(self, column_type); column_type : ", column_type)
         if column_type == "text" :
             self.pertinent_collection_list = self.get_custom_columns("text")
-            self.pertinent_collection_list.extend(["", _('add and select a column')])
+            self.pertinent_collection_list.extend(["", _('Add and select a column')])
             if DEBUG: prints("self.pertinent_collection_list: ", self.pertinent_collection_list)
         elif column_type == "comments":
             self.pertinent_coll_srl_list = self.get_custom_columns("comments")
-            self.pertinent_coll_srl_list.extend(["", _('add and select a column')])
+            self.pertinent_coll_srl_list.extend(["", _('Add and select a column')])
             if DEBUG: prints("self.pertinent_coll_srl_list: ", self.pertinent_coll_srl_list)
 
     def get_custom_columns(self, column_type):
@@ -92,18 +96,18 @@ class ConfigWidget(QWidget):
         info_label = QLabel(_("Select the columns to distribute the publisher overloaded information (noosfere)."))
         info_label.setFont(QFont('Arial', 11))
         info_label.setAlignment(Qt.AlignCenter)
-        info_label.setToolTip(_("To create a column means restarting calibre. Then, after restart, a valid column may be selected."))
+        info_label.setToolTip(_("To create and/or select a column means restarting calibre."))
             
-        label_collection = QLabel(_("publisher collection name"))
-        label_collection.setToolTip(_("displayed column is actualy selected"))
+        label_collection = QLabel(_("Name of collection publisher"))
+        label_collection.setToolTip(_("Displayed column is actualy selected"))
         self.name_collection = QComboBox(self)
         self.name_collection.addItems(self.pertinent_collection_list)
         self.name_collection.setCurrentIndex(self.name_collection.findText(self.current_collection_name,Qt.MatchFixedString))
         self.name_collection.textActivated.connect(self.select_for_collection)
 
-        label_coll_srl = QLabel(_("order number in publisher collection name"))
+        label_coll_srl = QLabel(_("Code in the publisher's collection"))
         self.name_coll_srl = QComboBox(self)
-        label_coll_srl.setToolTip(_("displayed column is actualy selected"))
+        label_coll_srl.setToolTip(_("Displayed column is actualy selected"))
         self.name_coll_srl.addItems(self.pertinent_coll_srl_list)
         self.name_coll_srl.setCurrentIndex(self.name_coll_srl.findText(self.current_coll_srl_name,Qt.MatchFixedString))
         self.name_coll_srl.textActivated.connect(self.select_for_coll_srl)
@@ -125,7 +129,7 @@ class ConfigWidget(QWidget):
 
     def select_for_collection(self, name):
         if DEBUG: prints("\nIn select_for_collection(self, name : {}".format(name))
-        if name ==  _('add and select a column'):
+        if name ==  _('Add and select a column'):
             self.create_custom_column(lookup_name = "#collection")
         else:
             self.collection_name = name
@@ -134,7 +138,7 @@ class ConfigWidget(QWidget):
 
     def select_for_coll_srl(self, name):
         if DEBUG: prints("\nIn select_for_coll_srl(self, name : {}".format(name))
-        if name ==  _('add and select a column'):
+        if name ==  _('Add and select a column'):
             self.create_custom_column(lookup_name = "#coll_srl")
         else:
             self.coll_srl_name = name
@@ -145,19 +149,19 @@ class ConfigWidget(QWidget):
     def create_custom_column(self, lookup_name=None):
         if DEBUG: prints("\nIn create_custom_column - lookup_name:", lookup_name)
         if lookup_name == "#collection" :
-            display_params = {"description": _("The publisher collection name of the volume")}
+            display_params = {"description": _("The publisher collection name for the volume")}
             datatype = "text"
             column_heading  = "collection"
 
         elif lookup_name == "#coll_srl" :
-            display_params =   {'description': _("The serial code in the publisher collection"), 'heading_position': 'hide', 'interpret_as': 'short-text'}
+            display_params =   {'description': _("The code in the publisher's collection"), 'heading_position': 'hide', 'interpret_as': 'short-text'}
             datatype = "comments"
             column_heading  = "coll_srl"
 
         if self.creator.must_restart():
             d_ttl  = _("Calibre must restart, sorry")
-            d_txt  = _("<p>No more modification cannot be taken into account </p>")
-            d_txt += _("<p>Calibre needs to be restarted before proceding </p>")
+            d_txt  = "<p>" + _("No more modification cannot be taken into account.")
+            d_txt += "</p><p>" + _("Calibre needs to be restarted before proceding") + "</p>"
             do_restart = self.ask_user_now(d_ttl, d_txt)
             if do_restart :
                      self.gui.quit(restart=True)
@@ -166,12 +170,12 @@ class ConfigWidget(QWidget):
         if DEBUG: prints("result : ", result)
         if result[0] == CreateNewCustomColumn.Result.COLUMN_ADDED:
             if lookup_name == "#collection" :
-                self.name_collection.removeItem(self.name_collection.findText(_('add and select a column'), Qt.MatchFixedString))
+                self.name_collection.removeItem(self.name_collection.findText(_('Add and select a column'), Qt.MatchFixedString))
                 self.name_collection.addItem(result[1])
                 self.name_collection.setCurrentIndex(self.name_collection.findText(result[1], Qt.MatchFixedString))
                 self.collection_name = result[1]
             elif lookup_name == "#coll_srl" :
-                self.name_collection.removeItem(self.name_collection.findText(_('add and select a column'), Qt.MatchFixedString))
+                self.name_collection.removeItem(self.name_collection.findText(_('Add and select a column'), Qt.MatchFixedString))
                 self.name_coll_srl.addItem(result[1])
                 self.name_coll_srl.setCurrentIndex(self.name_coll_srl.findText(result[1], Qt.MatchFixedString))
                 self.coll_srl_name = result[1]
@@ -185,10 +189,12 @@ class ConfigWidget(QWidget):
         prefs["COLLECTION_NAME"] = self.collection_name
         prefs["COLL_SRL_NAME"] = self.coll_srl_name
         
-        d_ttl  = _("Calibre should restart")
-        d_txt  = _("<p> In order to take effect, the choice of column needs a restart...</p>")
-        d_txt += _("<p> The name of publisher collection will be : <strong>{}</strong></p>").format(self.collection_name)
-        d_txt += _("<p> The order number in publisher collection name will be : <strong>{}</strong></p>").format(self.coll_srl_name)
+        d_ttl  = _("Calibre must restart, sorry")
+        d_txt  = "<p>" + _("In order to take effect, the choice of column needs a restart...")
+        d_txt += "</p><p>" + _("The name of publisher's collection will be under")
+        d_txt += ": <strong>{}</strong>".format(self.collection_name)
+        d_txt += "</p><p>" + _("The code in the publisher collection's will be under")
+        d_txt += ": <strong>{}</strong>".format(self.coll_srl_name) + "</p>"
         do_restart = self.ask_user_now(d_ttl, d_txt)
         if do_restart :
                  self.gui.quit(restart=True)
