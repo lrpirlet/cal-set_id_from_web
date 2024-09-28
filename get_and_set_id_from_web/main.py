@@ -448,7 +448,8 @@ class InterfacePlugin(InterfaceAction):
                 else:
                     returned_id=[]  #id_name, gt_st_id_frm_wb_id
                     for i in range(len(returned_url)):
-                        returned_id.append(self.deduce_id_frm_url(returned_url[i]))
+                        rtnid=self.deduce_id_frm_url(returned_url[i])
+                        if rtnid : returned_id.append(rtnid)
                     returned_id = list(set(returned_id))            # ensure NO duplicate in returned_id
                     if not returned_id:
                         prints(_('No id could be extracted from url, ') + _('no change will take place...'))
@@ -489,7 +490,7 @@ class InterfacePlugin(InterfaceAction):
           # Get the current metadata of interest for this book from the db
             mi = db.get_metadata(book_id, get_cover=False, cover_as_data=False)
             scrbl_dt = mi.publisher
-            if scrbl_dt:
+            if (scrbl_dt and (("€" in scrbl_dt) or ("§" in scrbl_dt))):
                 val_collection, val_coll_srl = None, None
                 if "€" in scrbl_dt: scrbl_dt, val_coll_srl = scrbl_dt.split("€")
                 if "§" in scrbl_dt: scrbl_dt, val_collection = scrbl_dt.split("§")
