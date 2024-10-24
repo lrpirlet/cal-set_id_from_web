@@ -497,6 +497,7 @@ class MainWindow(QMainWindow):
       # initialize self.selected_url
         self.selected_url = []
 
+        self.create_empty_results_file()
         self.set_browser()
         self.set_profile()
         self.set_isbn_box()
@@ -532,6 +533,10 @@ class MainWindow(QMainWindow):
 
         self.url_home = "https://www.noosfere.org/livres/noosearch.asp"
 
+      # create a new empty GetAndSetIdFromWeb_report_url to ensure that no old file gets used
+    def create_empty_results_file(self):
+        open(os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_report_url"),"w",encoding="utf_8").close()
+
       # browser
     def set_browser(self):
         print(f"in set_browser, value of self.dbg : {self.dbg}\n")      # entry point for each iteration of the browser
@@ -555,9 +560,9 @@ class MainWindow(QMainWindow):
     # def set_it_secure(self):    # disable javascript to reduce malware surface grip
     # Not a good idea really, to suppress Javascript capabilities remove too much...
     # In fact default seems most appropiate.
-    #  
+    #
     # from  src/calibre/utils :
-    #  
+    #
     # def secure_webengine(view_or_page_or_settings, for_viewer=False):
     #     s = view_or_page_or_settings.settings() if hasattr(
     #         view_or_page_or_settings, 'settings') else view_or_page_or_settings
@@ -591,7 +596,7 @@ class MainWindow(QMainWindow):
     def set_auteurs_box(self):                  # info boxes auteurs
         if self.dbg: print("in set_auteurs_box")
         self.auteurs_btn = QPushButton(_("Author"), self)
-        self.auteurs_btn.setToolTip(_("Author is copied in the clipboard (and fills noosfere search page)")) 
+        self.auteurs_btn.setToolTip(_("Author is copied in the clipboard (and fills noosfere search page)"))
         self.auteurs_dsp = QLineEdit()
         self.auteurs_dsp.setReadOnly(True)
         self.auteurs_dsp.setText(self.auteurs)
@@ -832,7 +837,7 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(1000, wait_a_minut)
 
     def report_returned_url(self, returned_url):                # sent response over report_returned_url file in temp dir
-        returned_url = list(set(returned_url))                  # returns NO duplicates        
+        returned_url = list(set(returned_url))                  # returns NO duplicates
         if self.dbg: print(f"in report_returned_url returned_url : {returned_url}")
         with open(os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_report_url"),"w",encoding="utf_8") as report_tpf:
             for i in range(len(returned_url)):
@@ -867,7 +872,7 @@ class MainWindow(QMainWindow):
         reply = QMessageBox.question(self, d_ttl, d_txt, QMessageBox.No | QMessageBox.Yes, QMessageBox.Yes)
         if reply == QMessageBox.Yes:
             print("WebEngineView was aborted for this book: aborted")
-            self.report_returned_url(["aborted by user"])
+            self.report_returned_url(["aborted by user"])  # "aborted by user" is tested in main
             self.lets_go()
 
     def closeEvent(self, event):                    # abort hit window exit "X" button we stop processing this and all following books
@@ -878,7 +883,7 @@ class MainWindow(QMainWindow):
         if reply == QMessageBox.Yes:
             event.accept()
             print("WebEngineView was closed: killed")
-            self.report_returned_url(["killed by user"])
+            self.report_returned_url(["killed by user"])    # "killed by user" is tested in main
             self.webpage.deleteLater()
             super().closeEvent(event)
         else:
