@@ -81,7 +81,7 @@ class InterfacePlugin(InterfaceAction):
     current_instance = None
 
   # assume main calibre is NOT in shutdown until genesis is called
-
+    do_shutdown = False     # (note: refered later by self.do_shutdown, do not delete)
   # remove previous log files for web_main process in the temp dir
     with contextlib.suppress(FileNotFoundError): os.remove(os.path.join(tempfile.gettempdir(), 'GetAndSetIdFromWeb.log'))
   # remove help file that may have been updated anyway
@@ -129,7 +129,7 @@ class InterfacePlugin(InterfaceAction):
         # self.menu.addSeparator()
 
         create_menu_action_unique(self, self.menu, _('Web browser to add one or more id to the selected book(s) before optionally downloading metadata'), 'blue_icon/choice.png',
-                                  triggered=self.get_ids_for_books)
+                                  triggered=self.get_more_ids_for_books)
         self.menu.addSeparator()
 
         create_menu_action_unique(self, self.menu, _('Web browser to add a series of empty books associated to the selected books before optionally downloading metadata'), 'blue_icon/choice.png',
@@ -204,34 +204,61 @@ class InterfacePlugin(InterfaceAction):
                 pass
         return None
 
-    def detect_abort_kill_in_returned_url(self, returned_url):
+    def extract_info_sent_by_web_main(self):
         '''
-        returns pair of boolean function of presence of "killed..." or "aborted..."
-        Note: either "killed..." or "aborted..." is present.
-        returns None otherwise
+        extract the info from the file "GetAndSetIdFromWeb_report_url" created by web_main,
+        validate the info. Either returned_id or vld is signifiant (not None)
+        returns returned_id, vld
         '''
-        if self.debug :
-            prints(f"in detect_abort_kill_in_returned_url(self, returned_url)")
+
+        def detect_abort_kill_in_returned_url(returned_url):
+
+            if self.debug :
+                prints(f"in detect_abort_kill_in_returned_url(returned_url)")
+                for i in range(len(returned_url)):
+                    prints(f"returned_url[{i}] : {returned_url[i]}")
+
+            for x in returned_url:
+                if "killed by user" in x:
+                    print('Killed, ' + _('no change will take place...'))
+                    return (False, False)        # NO gt_st_id_frm_wb_id received, NO more boo
+                if "aborted by user" in x:
+                    print('Aborted, ' + _('no change will take place...'))
+                    return (False, True)       # NO gt_st_id_frm_wb_id received, more book
+
+            return None
+
+        if self.debug: prints(f"in extract_info_sent_by_web_main(self)")
+
+        returned_id, vld = None, None
+
+        with open(os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_report_url"), "r", encoding="utf_8") as tpf:
+            returned_url = [line.rstrip('\n') for line in tpf]
+
+        if returned_url:
+            vld = detect_abort_kill_in_returned_url(returned_url)
+            if vld:
+                return returned_id, vld
+
+            returned_id=[]  #id_name, gt_st_id_frm_wb_id
             for i in range(len(returned_url)):
-                prints(f"returned_url[{i}] : {returned_url[i]}")
+                rtnid=self.deduce_id_frm_url(returned_url[i])
+                if rtnid :
+                    returned_id.append(rtnid)
 
-        for x in returned_url:
-            if "killed by user" in x:
-                print('Killed, ' + _('no change will take place...'))
-                return (False, False)        # NO gt_st_id_frm_wb_id received, NO more boo
-            if "aborted by user" in x:
-                print('Aborted, ' + _('no change will take place...'))
-                return (False, True)       # NO gt_st_id_frm_wb_id received, more book
+        if not (returned_url and returned_id):
+            prints(_('No id could be extracted from url, ') + _('no change will take place...'))
+            vld = (False, True)                             # gt_st_id_frm_wb_id NOT received, more book
 
-        return None
+        return returned_id, vld
 
-    def get_ids_for_books(self):
+    def get_more_ids_for_books(self):
         '''
         For the selected books:
         wipe metadata, launch a web-browser to select the desired volumes,
         set the gt_st_id_frm_wb_id, (?fire a metadata download?)
         '''
-        if self.debug: prints("in get_ids_for_books")
+        if self.debug: prints("in get_more_ids_for_books")
 
       # Get currently selected books
         rows = self.gui.library_view.selectionModel().selectedRows()
@@ -249,7 +276,7 @@ class InterfacePlugin(InterfaceAction):
         for book_id in ids:
           # if main calibre does shutdown, stop processing any more book_id
             if not self.do_shutdown:
-                answer = self.get_ids_for_one_book(book_id)
+                answer = self.get_more_ids_for_one_book(book_id)
                 gt_st_id_frm_wb_id_recu, more = answer[0], answer[1]
             else:
                 more = False        # if NOT more, gt_st_id_frm_wb_id_recu is False
@@ -275,13 +302,13 @@ class InterfacePlugin(InterfaceAction):
               # then we fill in the corresponding metadata
                 self.gui.iactions['Edit Metadata'].download_metadata(ids=list(set_ok), ensure_fields=frozenset(['title', 'authors']))
 
-    def get_ids_for_one_book(self, book_id):
+    def get_more_ids_for_one_book(self, book_id):
         '''
         For the books_id:
         wipe metadata, launch a web-browser to select the desired volumes,
         set the gt_st_id_frm_wb_id, remove the ISBN (?fire a metadata download?)
         '''
-        if self.debug: prints("in get_ids_for_one_book")
+        if self.debug: prints("in get_more_ids_for_one_book")
 
       # check for presence of needed column (needed for noosfere only)
         if not self.test_for_column():
@@ -327,23 +354,10 @@ class InterfacePlugin(InterfaceAction):
         if not self.do_shutdown:
           # sync file is gone, meaning either QWebEngineView process is closed so, we can collect the result,
           # bypass if shutdown_started OR if web_main did crash (examine GetAndSetIdFromWeb.log in system temp folder)
-            with open(os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_report_url"), "r", encoding="utf_8") as tpf:
-                returned_url = [line.rstrip('\n') for line in tpf]
-
-            if returned_url:
-                vld = self.detect_abort_kill_in_returned_url(returned_url)
-                if vld:
-                    return vld
-
-                returned_id=[]  #id_name, gt_st_id_frm_wb_id
-                for i in range(len(returned_url)):
-                    rtnid=self.deduce_id_frm_url(returned_url[i])
-                    if rtnid :
-                        returned_id.append(rtnid)
-
-            if not (returned_url and returned_id):
-              prints(_('No id could be extracted from url, ') + _('no change will take place...'))
-              return (False, True)                             # gt_st_id_frm_wb_id NOT received, more book
+            returned_id, vld = self.extract_info_sent_by_web_main()
+            if vld:
+                return vld
+            if self.debug: prints(f"returned_id : {returned_id}, len(returned_id) : {len(returned_id)}")
 
             for key in mi.custom_field_keys():
                 display_name, val, oldval, fm = mi.format_field_extended(key)
@@ -446,41 +460,26 @@ class InterfacePlugin(InterfaceAction):
             loop.exec_()
       # unless shutdown_started signal asserted
         if not self.do_shutdown:
-          # sync file is gone, meaning either QWebEngineView process is closed so, we can collect the result, bypass if shutdown_started
-          # OR web_main did crash (examine GetAndSetIdFromWeb.log in system temp folder)
-            with open(os.path.join(tempfile.gettempdir(),"GetAndSetIdFromWeb_report_url"), "r", encoding="utf_8") as tpf:
-                returned_url = [line.rstrip('\n') for line in tpf]
+          # sync file is gone, meaning either QWebEngineView process is closed so, we can collect the result,
+          # bypass if shutdown_started OR if web_main did crash (examine GetAndSetIdFromWeb.log in system temp folder)
+            returned_id, vld = self.extract_info_sent_by_web_main()
+            if vld:
+                return vld
+            if self.debug: prints(f"returned_id : {returned_id}, len(returned_id) : {len(returned_id)}")
 
-            if returned_url:
-                vld = self.detect_abort_kill_in_returned_url(returned_url)
-                if vld:
-                    return vld
-
-                returned_id=[]  #id_name, gt_st_id_frm_wb_id
-                for i in range(len(returned_url)):
-                    rtnid=self.deduce_id_frm_url(returned_url[i])
-                    if rtnid :
-                        returned_id.append(rtnid)
-
-            if not (returned_url and returned_id):
-              prints(_('No id could be extracted from url, ') + _('no change will take place...'))
-              return (False, True)                             # gt_st_id_frm_wb_id NOT received, more book
+          # format returned_id to expected books format then call self.gui.iactions['Add Books'].add_isbns() (if not shutdown)
+            books = []
+            for i in range(len(returned_id)):
+                if self.debug: prints(f"returned_id[{i}] : {returned_id[i]} /t type(returned_id[{i})] : {type(returned_id[i])}")
+                prefix, val = returned_id[i]
+                books.append({prefix: val, 'path': None, '':prefix})
+            if self.debug: prints(f"books : {books}")
 
         if self.do_shutdown:
             return(False,False)                             # shutdown_started, do not try to change db
-        else:      # format returned_id to expected books format then call self.gui.iactions['Add Books'].add_isbns()
-            if returned_id[0]:
-                books = []
-                if self.debug: prints(f"returned_id : {returned_id}, len(returned_id) : {len(returned_id)}")
-                for i in range(len(returned_id)):
-                    if self.debug: prints(f"returned_id[{i}] : {returned_id[i]} /t type(returned_id[{i})] : {type(returned_id[i])}")
-                    prefix, val = returned_id[i]
-                    books.append({prefix: val, 'path': None, '':prefix})
-                prints(f"books : {books}")
-
-                self.gui.iactions['Add Books'].add_isbns(books, add_tags=["DESIRE"], check_for_existing=True)
-                return (True, True)                                 # gt_st_id_frm_wb_id received, more book
-            return (False, True)                            # gt_st_id_frm_wb_id NOT received, more book
+        else:     # commit the added books in the db
+            self.gui.iactions['Add Books'].add_isbns(books, add_tags=["DESIRE"], check_for_existing=True)
+            return (True, True)                                 # gt_st_id_frm_wb_id received, more book
 
     def unscramble_publisher(self):
         if self.debug: prints("in unscramble_publisher")
